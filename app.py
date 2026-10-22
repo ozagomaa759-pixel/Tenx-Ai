@@ -2,13 +2,12 @@
 import os
 from flask import Flask, request, jsonify, send_from_directory
 import requests
-
-app = Flask(__name__, static_folder="static")
+app = Flask(__name__, static_folder=None)
 
 
 @app.get("/")
 def home():
-    return send_from_directory("static", "index.html")
+    return send_from_directory("public", "index.html")
 
 
 @app.post("/api/chat")
