@@ -1,46 +1,135 @@
+
 import os
 from flask import Flask, request, jsonify, send_from_directory
 import requests
 
 app = Flask(__name__, static_folder="static")
 
+
 @app.get("/")
 def home():
     return send_from_directory("static", "index.html")
 
+
 @app.post("/api/chat")
 def chat():
-    api_key = os.getenv("DEEPSEEK_API_KEY")
+    api_key = os.getenv("GEMINI_API_KEY")
+
     if not api_key:
-        return jsonify(error="Missing DEEPSEEK_API_KEY. Configure it in your terminal before starting the server."), 503
+        return jsonify(
+            error="Gemini API key is not configured on the server."
+        ), 503
+
     body = request.get_json(silent=True) or {}
     messages = body.get("messages", [])
+
     if not isinstance(messages, list) or not messages:
         return jsonify(error="Please enter a message."), 400
-    safe_messages = []
-    for m in messages[-20:]:
-        if isinstance(m, dict) and m.get("role") in ("user", "assistant") and isinstance(m.get("content"), str):
-            safe_messages.append({"role": m["role"], "content": m["content"][:8000]})
+
+    contents = []
+
+    for message in messages[-20:]:
+        if not isinstance(message, dict):
+            continue
+
+        role = message.get("role")
+        content = message.get("content")
+
+        if role not in ("user", "assistant") or not isinstance(content, str):
+            continue
+
+        content = content[:8000].strip()
+
+        if not content:
+            continue
+
+        contents.append({
+            "role": "user" if role == "user" else "model",
+            "parts": [{"text": content}]
+        })
+
+    if not contents or contents[-1]["role"] != "user":
+        return jsonify(error="Please send a new message."), 400
+
+    url = (
+        "https://generativelanguage.googleapis.com/"
+        "v1beta/models/gemini-2.5-flash:generateContent"
+    )
+
+    payload = {
+        "systemInstruction": {
+            "parts": [{
+                "text": (
+                    "You are TENX AI, a friendly educational assistant. "
+                    "Explain clearly, support learning, and answer in "
+                    "the same language the user uses."
+                )
+            }]
+        },
+        "contents": contents,
+        "generationConfig": {
+            "temperature": 0.7,
+            "maxOutputTokens": 2048
+        }
+    }
+
     try:
-        r = requests.post(
-            "https://api.deepseek.com/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={"model": "deepseek-chat", "messages": [
-                {"role": "system", "content": "You are TENX AI, a helpful, friendly educational assistant. Explain clearly, support learning, and answer in the language the user uses."},
-                *safe_messages
-            ], "temperature": 0.7},
+        response = requests.post(
+            url,
+            headers={
+                "x-goog-api-key": api_key,
+                "Content-Type": "application/json"
+            },
+            json=payload,
             timeout=60
         )
-        if not r.ok:
-            return jsonify(error=f"AI provider returned status {r.status}. Check the API key, account balance, and model access."), 502
-        data = r.json()
-        answer = data["choices"][0]["message"]["content"]
+
+        if not response.ok:
+            app.logger.error(
+                "Gemini returned status %s: %s",
+                response.status_code,
+                response.text[:1000]
+            )
+            return jsonify(
+                error="Gemini could not answer. Check your API key, "
+                      "model access, and API quota in Google AI Studio."
+            ), 502
+
+        data = response.json()
+        candidates = data.get("candidates", [])
+
+        if not candidates:
+            return jsonify(
+                error="Gemini returned no answer. Please try again."
+            ), 502
+
+        parts = candidates[0].get("content", {}).get("parts", [])
+        answer = "".join(
+            part.get("text", "")
+            for part in parts
+            if isinstance(part.get("text"), str)
+        ).strip()
+
+        if not answer:
+            return jsonify(error="The AI returned an empty answer."), 502
+
         return jsonify(reply=answer)
+
     except requests.Timeout:
-        return jsonify(error="The AI request timed out. Please try again."), 504
+        return jsonify(
+            error="The request timed out. Please try again."
+        ), 504
+
+    except requests.RequestException:
+        app.logger.exception("TENX AI connection failed")
+        return jsonify(
+            error="Could not connect to Gemini. Please try again."
+        ), 502
+
     except Exception:
         app.logger.exception("TENX AI request failed")
-        return jsonify(error="Could not reach the AI service. Check your internet connection and server logs."), 502
+        return jsonify(error="An unexpected server error occurred."), 500
+
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=False)
+    app.run(host="0.0.0.0", port=5000, debug=False)
