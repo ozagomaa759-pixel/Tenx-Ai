@@ -6,7 +6,8 @@ app = Flask(__name__, static_folder=None)
 
 @app.get("/")
 def home():
-    return send_from_directory("public", "index.html")
+    return send_from_directory(".", "index.html")
+
 
 @app.post("/api/chat")
 def chat():
