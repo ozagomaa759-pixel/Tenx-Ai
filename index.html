@@ -1,39 +1,417 @@
-async function sendMessage() {
-    const userText = userInput.value.trim(); // أو اسم المتغير عندك
-    if (!userText) return;
-
-    // 1. اعرض رسالة المستخدم في الواجهة الأصلية
-    appendUserMessage(userText); 
-    userInput.value = '';
-
-    try {
-        const response = await fetch('/api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: userText }] }]
-            })
-        });
-
-        const data = await response.json();
-
-        // 2. قراءة الرد المباشر القادم من app.py
-        let botText = "";
-        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-            botText = data.candidates[0].content.parts[0].text;
-        } else if (data.text) {
-            botText = data.text;
-        } else if (data.error) {
-            botText = "خطأ من الـ API: " + JSON.stringify(data.error);
-        } else {
-            botText = "لم أتمكن من فهم الرد من السيرفر.";
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TENX AI | Future Interface</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;800&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #030712;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --accent-cyan: #00f2fe;
+            --accent-purple: #9d4edd;
+            --accent-blue: #4361ee;
+            --text-main: #f9fafb;
+            --text-muted: #9ca3af;
+            --user-msg-bg: linear-gradient(135deg, #3a0ca3, #4361ee);
+            --bot-msg-bg: rgba(31, 41, 55, 0.8);
+            --glow-shadow: 0 0 25px rgba(0, 242, 254, 0.25);
         }
 
-        // 3. اعرض رد الذكاء الاصطناعي في واجهتك
-        appendBotMessage(botText);
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Cairo', sans-serif;
+        }
 
-    } catch (err) {
-        console.error(err);
-        appendBotMessage("تعذر الاتصال بالسيرفر.");
-    }
-}
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(67, 97, 238, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(157, 78, 221, 0.15) 0px, transparent 50%);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* App Outer Frame */
+        .app-container {
+            width: 100%;
+            max-width: 1100px;
+            height: 92vh;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), var(--glow-shadow);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Top Header */
+        .header {
+            padding: 18px 28px;
+            background: rgba(15, 23, 42, 0.8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-logo {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            border-radius: 14px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 22px;
+            color: #fff;
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
+        }
+
+        .brand-info h1 {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            background: linear-gradient(90deg, #fff, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-info p {
+            font-size: 12px;
+            color: var(--accent-cyan);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #10b981;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        /* Chat Area */
+        .chat-body {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            scroll-behavior: smooth;
+        }
+
+        .chat-body::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-body::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+        }
+
+        /* Message Bubble Styles */
+        .message-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            max-width: 82%;
+            animation: fadeIn 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-row.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .user .message-avatar {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            color: #fff;
+        }
+
+        .bot .message-avatar {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            color: var(--accent-cyan);
+        }
+
+        .message-content {
+            padding: 14px 20px;
+            border-radius: 18px;
+            font-size: 15px;
+            line-height: 1.7;
+            position: relative;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+
+        .user .message-content {
+            background: var(--user-msg-bg);
+            color: #fff;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+        }
+
+        .bot .message-content {
+            background: var(--bot-msg-bg);
+            color: var(--text-main);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Typing Indicator */
+        .typing-indicator {
+            display: flex;
+            gap: 6px;
+            padding: 8px 12px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-cyan);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* Input Controls */
+        .input-area {
+            padding: 20px 24px;
+            background: rgba(15, 23, 42, 0.9);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            padding: 16px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .input-wrapper input:focus {
+            border-color: var(--accent-cyan);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.2);
+        }
+
+        .send-btn {
+            width: 52px;
+            height: 52px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            border: none;
+            border-radius: 16px;
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 242, 254, 0.3);
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0, 242, 254, 0.5);
+        }
+
+        .send-btn:active {
+            transform: scale(0.95);
+        }
+
+        @media (max-width: 768px) {
+            .app-container { height: 100vh; border-radius: 0; }
+            .message-row { max-width: 90%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="brand">
+                <div class="brand-logo"><i class="fa-solid fa-brain"></i></div>
+                <div class="brand-info">
+                    <h1>TENX AI</h1>
+                    <p><span class="status-dot"></span> متصل بـ Gemini 1.5</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Container -->
+        <div class="chat-body" id="chatBody">
+            <div class="message-row bot">
+                <div class="message-avatar"><i class="fa-solid fa-robot"></i></div>
+                <div class="message-content">أهلاً بك! أنا **Tenx-AI** المساعد الذكي الخاص بك. كيف يمكنني مساعدتك اليوم؟ 🚀</div>
+            </div>
+        </div>
+
+        <!-- Input Box -->
+        <div class="input-area">
+            <div class="input-wrapper">
+                <input type="text" id="userInput" placeholder="اكتب رسالتك هنا..." onkeydown="if(event.key === 'Enter') sendMessage()">
+            </div>
+            <button class="send-btn" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <script>
+        const chatBody = document.getElementById('chatBody');
+        const userInput = document.getElementById('user-input') || document.getElementById('userInput');
+
+        function appendMessage(sender, text) {
+            const isUser = sender === 'user';
+            const msgRow = document.createElement('div');
+            msgRow.className = `message-row ${sender}`;
+
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.innerHTML = isUser ? '<i class="fa-solid fa-user"></i>' : '<i class="fa-solid fa-robot"></i>';
+
+            const content = document.createElement('div');
+            content.className = 'message-content';
+            content.textContent = text;
+
+            msgRow.appendChild(avatar);
+            msgRow.appendChild(content);
+            chatBody.appendChild(msgRow);
+
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        function showTyping() {
+            const typingRow = document.createElement('div');
+            typingRow.className = 'message-row bot';
+            typingRow.id = 'typingIndicator';
+            typingRow.innerHTML = `
+                <div class="message-avatar"><i class="fa-solid fa-robot"></i></div>
+                <div class="message-content">
+                    <div class="typing-indicator">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+            `;
+            chatBody.appendChild(typingRow);
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        function removeTyping() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) indicator.remove();
+        }
+
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            appendMessage('user', text);
+            userInput.value = '';
+
+            showTyping();
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: text }] }]
+                    })
+                });
+
+                const data = await response.json();
+                removeTyping();
+
+                let botReply = "";
+                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                    botReply = data.candidates[0].content.parts[0].text;
+                } else if (data.text) {
+                    botReply = data.text;
+                } else if (data.error) {
+                    botReply = "حدث خطأ من السيرفر: " + (typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
+                } else {
+                    botReply = "لم أتمكن من استلام إجابة صحيحة من السيرفر.";
+                }
+
+                appendMessage('bot', botReply);
+
+            } catch (err) {
+                console.error(err);
+                removeTyping();
+                appendMessage('bot', 'عذراً، حدث خطأ أثناء الاتصال بالشبكة.');
+            }
+        }
+    </script>
+</body>
+</html>
+
