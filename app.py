@@ -8,7 +8,7 @@ app = Flask(__name__)
 def home():
     # Vercel serves files in /public through its CDN; this route is a fallback
     from flask import send_from_directory
-    return send_from_directory("public", "index.html")
+    return send_from_directory(".", "index.html")
 
 @app.get("/api/health")
 def health():
