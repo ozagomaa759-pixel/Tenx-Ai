@@ -43,7 +43,7 @@ def chat():
     if not contents or contents[-1]["role"] != "user":
         return jsonify(error="Please send a new message."), 400
 
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent"
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent"
     payload = {
         "systemInstruction": {
             "parts": [{
