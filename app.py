@@ -59,7 +59,7 @@ def chat():
             url,
             headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
             json=payload,
-            timeout=45
+            timeout=30
         )
         try:
             data = response.json()
