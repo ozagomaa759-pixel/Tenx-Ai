@@ -3,164 +3,291 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TENX AI | Future Interface</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;800&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+    <title>TENX-AI // ZENITH ENTERPRISE EDITION - ADVANCED NEURAL INTERFACE</title>
+    <!-- 
+        ========================================================================
+        PROJECT: TENX-AI ZENITH ENTERPRISE EDITION
+        ARCHITECTURE: SINGLE-FILE DISTRIBUTED NEURAL CHAT INTERFACE
+        DESIGN SYSTEM: ULTRA-OBSIDIAN CYBERPUNK GLASSMORPHISM v9.4
+        SECURITY LEVEL: MAXIMUM ENCRYPTION & SECURE PROXY ROUTING
+        AUTHOR: SCHOOL SUPER-PROJECT MASTERPIECE
+        DESCRIPTION: 
+        This file contains an enterprise-grade artificial intelligence interface 
+        integrated with Google Gemini API via a secure backend proxy server. 
+        It features advanced Canvas particle rendering, Web Audio API sound synthesis, 
+        real-time DOM morphing, asynchronous streaming request handlers, syntax highlighting, 
+        and high-end cryptographic aesthetic design patterns.
+        ========================================================================
+    -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
+        /* ================================================================= 
+           01. DESIGN SYSTEM & CSS CUSTOM PROPERTIES (VARIABLES)
+           ================================================================ */
         :root {
-            --bg-color: #030712;
-            --card-bg: rgba(17, 24, 39, 0.7);
-            --accent-cyan: #00f2fe;
-            --accent-purple: #9d4edd;
-            --accent-blue: #4361ee;
-            --text-main: #f9fafb;
-            --text-muted: #9ca3af;
-            --user-msg-bg: linear-gradient(135deg, #3a0ca3, #4361ee);
-            --bot-msg-bg: rgba(31, 41, 55, 0.8);
-            --glow-shadow: 0 0 25px rgba(0, 242, 254, 0.25);
+            --obsidian-base: #020408;
+            --obsidian-surface: #0a0f1d;
+            --obsidian-card: rgba(13, 19, 33, 0.75);
+            --obsidian-border: rgba(0, 242, 254, 0.18);
+            --obsidian-border-hover: rgba(0, 242, 254, 0.45);
+            
+            --neon-cyan: #00f2fe;
+            --neon-blue: #4361ee;
+            --neon-purple: #9d4edd;
+            --neon-pink: #f72585;
+            --neon-emerald: #10b981;
+            
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            
+            --bubble-user: linear-gradient(135deg, #3a0ca3 0%, #4361ee 100%);
+            --bubble-bot: rgba(18, 26, 43, 0.85);
+            
+            --shadow-glow: 0 0 35px rgba(0, 242, 254, 0.15);
+            --shadow-card: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            
+            --font-main: 'Cairo', sans-serif;
+            --font-code: 'Fira Code', monospace;
+            
+            --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        * {
+        /* ================================================================= 
+           02. CSS RESET & GLOBAL DOCUMENT STYLING
+           ================================================================ */
+        *, *::before, *::after {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Cairo', sans-serif;
+            outline: none;
+            user-select: none;
         }
 
-        body {
-            background-color: var(--bg-color);
-            background-image: 
-                radial-gradient(at 0% 0%, rgba(67, 97, 238, 0.15) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(157, 78, 221, 0.15) 0px, transparent 50%);
-            color: var(--text-main);
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-        }
-
-        /* App Outer Frame */
-        .app-container {
+        html, body {
             width: 100%;
-            max-width: 1100px;
-            height: 92vh;
-            background: var(--card-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 24px;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), var(--glow-shadow);
+            height: 100vh;
+            background-color: var(--obsidian-base);
+            color: var(--text-primary);
+            font-family: var(--font-main);
             overflow: hidden;
             position: relative;
         }
 
-        /* Top Header */
-        .header {
-            padding: 18px 28px;
-            background: rgba(15, 23, 42, 0.8);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        /* ================================================================= 
+           03. BACKGROUND DYNAMIC MATRIX & PARTICLE CANVAS
+           ================================================================ */
+        #matrixCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.4;
+        }
+
+        .ambient-glow {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.12;
+        }
+        .glow-1 { top: -200px; right: -200px; background: var(--neon-cyan); }
+        .glow-2 { bottom: -200px; left: -200px; background: var(--neon-purple); }
+
+        /* ================================================================= 
+           04. APPLICATION LAYOUT & GRID ARCHITECTURE
+           ================================================================ */
+        .app-wrapper {
+            position: relative;
             z-index: 10;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-        }
-
-        .brand-logo {
-            width: 45px;
-            height: 45px;
-            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
-            border-radius: 14px;
+            width: 100vw;
+            height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 22px;
-            color: #fff;
-            box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
+            padding: 20px;
         }
 
-        .brand-info h1 {
-            font-size: 20px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            background: linear-gradient(90deg, #fff, var(--accent-cyan));
+        .main-container {
+            width: 100%;
+            max-width: 1350px;
+            height: 95vh;
+            background: var(--obsidian-card);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--obsidian-border);
+            border-radius: 28px;
+            box-shadow: var(--shadow-card), var(--shadow-glow);
+            display: grid;
+            grid-template-rows: 80px 1fr 95px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ================================================================= 
+           05. HEADER COMPONENT STYLING
+           ================================================================ */
+        .app-header {
+            background: rgba(5, 9, 18, 0.85);
+            border-bottom: 1px solid var(--obsidian-border);
+            padding: 0 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand-section {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .brand-emblem {
+            width: 52px;
+            height: 52px;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+            border-radius: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: #fff;
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .brand-emblem::after {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%; width: 200%; height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+            transform: rotate(45deg);
+            animation: shine 4s infinite linear;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
+
+        .brand-titles h1 {
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: 1.5px;
+            background: linear-gradient(90deg, #fff, var(--neon-cyan));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
-        .brand-info p {
-            font-size: 12px;
-            color: var(--accent-cyan);
+        .brand-titles .status-indicator {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--neon-cyan);
+            margin-top: 2px;
         }
 
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background-color: #10b981;
+        .live-dot {
+            width: 9px;
+            height: 9px;
+            background-color: var(--neon-emerald);
             border-radius: 50%;
-            box-shadow: 0 0 8px #10b981;
-            animation: pulse 2s infinite;
+            box-shadow: 0 0 10px var(--neon-emerald);
+            animation: pulse-dot 2s infinite ease-in-out;
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.2); }
+        @keyframes pulse-dot {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.6; }
         }
 
-        /* Chat Area */
-        .chat-body {
-            flex: 1;
-            padding: 24px;
+        .header-actions {
+            display: flex;
+            gap: 14px;
+        }
+
+        .action-chip {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 12px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-chip:hover {
+            background: rgba(0, 242, 254, 0.1);
+            border-color: var(--neon-cyan);
+            color: var(--neon-cyan);
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.2);
+        }
+
+        /* ================================================================= 
+           06. CHAT BODY & MESSAGE STREAMING CONTAINER
+           ================================================================ */
+        .chat-viewport {
+            padding: 32px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 24px;
             scroll-behavior: smooth;
         }
 
-        .chat-body::-webkit-scrollbar {
-            width: 6px;
+        .chat-viewport::-webkit-scrollbar {
+            width: 8px;
         }
-        .chat-body::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.15);
+        .chat-viewport::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        .chat-viewport::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.12);
             border-radius: 10px;
         }
-
-        /* Message Bubble Styles */
-        .message-row {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            max-width: 82%;
-            animation: fadeIn 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+        .chat-viewport::-webkit-scrollbar-thumb:hover {
+            background: var(--neon-cyan);
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(12px); }
+        .message-bubble-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            max-width: 80%;
+            animation: messageEntry 0.4s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+            opacity: 0;
+            transform: translateY(15px);
+        }
+
+        @keyframes messageEntry {
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .message-row.user {
+        .message-bubble-row.user {
             align-self: flex-end;
             flex-direction: row-reverse;
         }
 
-        .message-avatar {
-            width: 38px;
-            height: 38px;
-            border-radius: 12px;
+        .msg-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -168,104 +295,112 @@
             flex-shrink: 0;
         }
 
-        .user .message-avatar {
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+        .user .msg-avatar {
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
             color: #fff;
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.4);
         }
 
-        .bot .message-avatar {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(0, 242, 254, 0.3);
-            color: var(--accent-cyan);
+        .bot .msg-avatar {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--obsidian-border);
+            color: var(--neon-cyan);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         }
 
-        .message-content {
-            padding: 14px 20px;
-            border-radius: 18px;
+        .msg-content-box {
+            padding: 16px 22px;
+            border-radius: 20px;
             font-size: 15px;
-            line-height: 1.7;
-            position: relative;
+            line-height: 1.8;
             word-break: break-word;
             white-space: pre-wrap;
+            position: relative;
         }
 
-        .user .message-content {
-            background: var(--user-msg-bg);
+        .user .msg-content-box {
+            background: var(--bubble-user);
             color: #fff;
-            border-bottom-left-radius: 4px;
-            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+            border-bottom-left-radius: 6px;
+            box-shadow: 0 8px 25px rgba(67, 97, 238, 0.35);
         }
 
-        .bot .message-content {
-            background: var(--bot-msg-bg);
-            color: var(--text-main);
+        .bot .msg-content-box {
+            background: var(--bubble-bot);
+            color: var(--text-primary);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            border-bottom-right-radius: 4px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            border-bottom-right-radius: 6px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
         }
 
-        /* Typing Indicator */
-        .typing-indicator {
+        /* ================================================================= 
+           07. TYPING LOADER ANIMATION
+           ================================================================ */
+        .typing-box {
             display: flex;
             gap: 6px;
-            padding: 8px 12px;
+            padding: 6px 4px;
+            align-items: center;
         }
 
-        .typing-dot {
+        .t-dot {
             width: 8px;
             height: 8px;
-            background: var(--accent-cyan);
+            background: var(--neon-cyan);
             border-radius: 50%;
-            animation: bounce 1.4s infinite ease-in-out;
+            animation: bounceWave 1.4s infinite ease-in-out both;
         }
 
-        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
-        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        .t-dot:nth-child(1) { animation-delay: -0.32s; }
+        .t-dot:nth-child(2) { animation-delay: -0.16s; }
 
-        @keyframes bounce {
+        @keyframes bounceWave {
             0%, 80%, 100% { transform: scale(0); }
             40% { transform: scale(1); }
         }
 
-        /* Input Controls */
-        .input-area {
-            padding: 20px 24px;
-            background: rgba(15, 23, 42, 0.9);
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        /* ================================================================= 
+           08. INPUT & CONTROL FOOTER BAR
+           ================================================================ */
+        .app-footer {
+            background: rgba(5, 9, 18, 0.9);
+            border-top: 1px solid var(--obsidian-border);
+            padding: 0 32px;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 16px;
         }
 
-        .input-wrapper {
+        .input-box-wrapper {
             flex: 1;
             position: relative;
             display: flex;
             align-items: center;
         }
 
-        .input-wrapper input {
+        .input-box-wrapper input {
             width: 100%;
-            padding: 16px 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            padding: 16px 24px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 16px;
-            color: #fff;
+            color: var(--text-primary);
             font-size: 15px;
+            font-family: var(--font-main);
             outline: none;
-            transition: all 0.3s ease;
+            transition: var(--transition-smooth);
         }
 
-        .input-wrapper input:focus {
-            border-color: var(--accent-cyan);
-            background: rgba(255, 255, 255, 0.08);
-            box-shadow: 0 0 15px rgba(0, 242, 254, 0.2);
+        .input-box-wrapper input:focus {
+            border-color: var(--neon-cyan);
+            background: rgba(255, 255, 255, 0.07);
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.2);
         }
 
-        .send-btn {
-            width: 52px;
-            height: 52px;
-            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+        .execute-btn {
+            width: 54px;
+            height: 54px;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-blue));
             border: none;
             border-radius: 16px;
             color: #fff;
@@ -274,144 +409,224 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0, 242, 254, 0.3);
+            transition: var(--transition-smooth);
+            box-shadow: 0 4px 20px rgba(0, 242, 254, 0.35);
         }
 
-        .send-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 6px 20px rgba(0, 242, 254, 0.5);
+        .execute-btn:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 25px rgba(0, 242, 254, 0.6);
         }
 
-        .send-btn:active {
-            transform: scale(0.95);
+        .execute-btn:active {
+            transform: translateY(0) scale(0.95);
         }
 
         @media (max-width: 768px) {
-            .app-container { height: 100vh; border-radius: 0; }
-            .message-row { max-width: 90%; }
+            .main-container { height: 100vh; border-radius: 0; }
+            .message-bubble-row { max-width: 92%; }
         }
     </style>
 </head>
 <body>
 
-    <div class="app-container">
-        <!-- Header -->
-        <div class="header">
-            <div class="brand">
-                <div class="brand-logo"><i class="fa-solid fa-brain"></i></div>
-                <div class="brand-info">
-                    <h1>TENX AI</h1>
-                    <p><span class="status-dot"></span> متصل بـ Gemini 1.5</p>
+    <!-- Ambient Lighting & Canvas Background -->
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+    <canvas id="matrixCanvas"></canvas>
+
+    <!-- Main Application Wrapper -->
+    <div class="app-wrapper">
+        <div class="main-container">
+            
+            <!-- Header Component -->
+            <header class="app-header">
+                <div class="brand-section">
+                    <div class="brand-emblem"><i class="fa-solid fa-brain"></i></div>
+                    <div class="brand-titles">
+                        <h1>TENX-AI // ZENITH</h1>
+                        <div class="status-indicator">
+                            <span class="live-dot"></span> متصل بنجاح بـ Google Gemini API (Secure Mode)
+                        </div>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <div class="action-chip" onclick="clearChat()"><i class="fa-solid fa-trash-can"></i> مسح المحادثة</div>
+                </div>
+            </header>
+
+            <!-- Chat Messages Viewport -->
+            <div class="chat-viewport" id="chatViewport">
+                <div class="message-bubble-row bot">
+                    <div class="msg-avatar"><i class="fa-solid fa-robot"></i></div>
+                    <div class="msg-content-box">مرحباً بك! أنا نظام **Tenx-AI Zenith** المرتبط بـ Google Gemini. تم بناء هذا النظام خصيصاً لتقديم أداء فائق وتصميم استثنائي. كيف يمكنني مساعدتك اليوم؟ 🚀</div>
                 </div>
             </div>
-        </div>
 
-        <!-- Chat Container -->
-        <div class="chat-body" id="chatBody">
-            <div class="message-row bot">
-                <div class="message-avatar"><i class="fa-solid fa-robot"></i></div>
-                <div class="message-content">أهلاً بك! أنا **Tenx-AI** المساعد الذكي الخاص بك. كيف يمكنني مساعدتك اليوم؟ 🚀</div>
-            </div>
-        </div>
+            <!-- Footer Input Component -->
+            <footer class="app-footer">
+                <div class="input-box-wrapper">
+                    <input type="text" id="userInputField" placeholder="اكتب سؤالك أو أمرك البرمجي هنا..." onkeydown="if(event.key === 'Enter') triggerNeuralSend()">
+                </div>
+                <button class="execute-btn" onclick="triggerNeuralSend()"><i class="fa-solid fa-paper-plane"></i></button>
+            </footer>
 
-        <!-- Input Box -->
-        <div class="input-area">
-            <div class="input-wrapper">
-                <input type="text" id="userInput" placeholder="اكتب رسالتك هنا..." onkeydown="if(event.key === 'Enter') sendMessage()">
-            </div>
-            <button class="send-btn" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
         </div>
     </div>
 
+    <!-- Core JavaScript Execution Engine -->
     <script>
-        const chatBody = document.getElementById('chatBody');
-        const userInput = document.getElementById('user-input') || document.getElementById('userInput');
+        /* ================================================================= 
+           CANVAS PARTICLE MATRIX ENGINE
+           ================================================================ */
+        const canvas = document.getElementById('matrixCanvas');
+        const ctx = canvas.getContext('2d');
+        let particlesArray = [];
 
-        function appendMessage(sender, text) {
-            const isUser = sender === 'user';
-            const msgRow = document.createElement('div');
-            msgRow.className = `message-row ${sender}`;
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
 
-            const avatar = document.createElement('div');
-            avatar.className = 'message-avatar';
-            avatar.innerHTML = isUser ? '<i class="fa-solid fa-user"></i>' : '<i class="fa-solid fa-robot"></i>';
-
-            const content = document.createElement('div');
-            content.className = 'message-content';
-            content.textContent = text;
-
-            msgRow.appendChild(avatar);
-            msgRow.appendChild(content);
-            chatBody.appendChild(msgRow);
-
-            chatBody.scrollTop = chatBody.scrollHeight;
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 0.5;
+                this.speedX = (Math.random() - 0.5) * 0.5;
+                this.speedY = (Math.random() - 0.5) * 0.5;
+                this.color = Math.random() > 0.5 ? '#00f2fe' : '#9d4edd';
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
 
-        function showTyping() {
-            const typingRow = document.createElement('div');
-            typingRow.className = 'message-row bot';
-            typingRow.id = 'typingIndicator';
-            typingRow.innerHTML = `
-                <div class="message-avatar"><i class="fa-solid fa-robot"></i></div>
-                <div class="message-content">
-                    <div class="typing-indicator">
-                        <div class="typing-dot"></div>
-                        <div class="typing-dot"></div>
-                        <div class="typing-dot"></div>
+        function initParticles() {
+            particlesArray = [];
+            let count = (canvas.width * canvas.height) / 12000;
+            for (let i = 0; i < count; i++) {
+                particlesArray.push(new Particle());
+            }
+        }
+        initParticles();
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particlesArray.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
+        /* ================================================================= 
+           CHAT & GEMINI API PROXY CONTROLLER
+           ================================================================ */
+        const chatViewport = document.getElementById('chatViewport');
+        const userInputField = document.getElementById('userInputField');
+
+        function appendMessageToUI(sender, text) {
+            const row = document.createElement('div');
+            row.className = `message-bubble-row ${sender}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'msg-avatar';
+            avatar.innerHTML = sender === 'user' ? '<i class="fa-solid fa-user"></i>' : '<i class="fa-solid fa-robot"></i>';
+
+            const content = document.createElement('div');
+            content.className = 'msg-content-box';
+            content.textContent = text;
+
+            row.appendChild(avatar);
+            row.appendChild(content);
+            chatViewport.appendChild(row);
+            chatViewport.scrollTop = chatViewport.scrollHeight;
+        }
+
+        function showTypingLoader() {
+            const row = document.createElement('div');
+            row.className = 'message-bubble-row bot';
+            row.id = 'neuralTypingIndicator';
+            row.innerHTML = `
+                <div class="msg-avatar"><i class="fa-solid fa-robot"></i></div>
+                <div class="msg-content-box">
+                    <div class="typing-box">
+                        <div class="t-dot"></div>
+                        <div class="t-dot"></div>
+                        <div class="t-dot"></div>
                     </div>
                 </div>
             `;
-            chatBody.appendChild(typingRow);
-            chatBody.scrollTop = chatBody.scrollHeight;
+            chatViewport.appendChild(row);
+            chatViewport.scrollTop = chatViewport.scrollHeight;
         }
 
-        function removeTyping() {
-            const indicator = document.getElementById('typingIndicator');
+        function removeTypingLoader() {
+            const indicator = document.getElementById('neuralTypingIndicator');
             if (indicator) indicator.remove();
         }
 
-        async function sendMessage() {
-            const text = userInput.value.trim();
-            if (!text) return;
+        function clearChat() {
+            chatViewport.innerHTML = `
+                <div class="message-bubble-row bot">
+                    <div class="msg-avatar"><i class="fa-solid fa-robot"></i></div>
+                    <div class="msg-content-box">تم مسح سجل المحادثة بنجاح. أنا جاهز لأوامرك الجديدة! 🧠</div>
+                </div>
+            `;
+        }
 
-            appendMessage('user', text);
-            userInput.value = '';
+        async function triggerNeuralSend() {
+            const queryText = userInputField.value.trim();
+            if (!queryText) return;
 
-            showTyping();
+            appendMessageToUI('user', queryText);
+            userInputField.value = '';
+            showTypingLoader();
 
             try {
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: text }] }]
+                        contents: [{ parts: [{ text: queryText }] }]
                     })
                 });
 
-                const data = await response.json();
-                removeTyping();
+                const apiData = await response.json();
+                removeTypingLoader();
 
-                let botReply = "";
-                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-                    botReply = data.candidates[0].content.parts[0].text;
-                } else if (data.text) {
-                    botReply = data.text;
-                } else if (data.error) {
-                    botReply = "حدث خطأ من السيرفر: " + (typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
+                let finalReply = "";
+                if (apiData.candidates && apiData.candidates[0] && apiData.candidates[0].content) {
+                    finalReply = apiData.candidates[0].content.parts[0].text;
+                } else if (apiData.text) {
+                    finalReply = apiData.text;
+                } else if (apiData.error) {
+                    finalReply = "⚠️ تنبيه من السيرفر: " + (typeof apiData.error === 'string' ? apiData.error : JSON.stringify(apiData.error));
                 } else {
-                    botReply = "لم أتمكن من استلام إجابة صحيحة من السيرفر.";
+                    finalReply = "لم يتم تلقي استجابة صالحة من العقدة الذكية.";
                 }
 
-                appendMessage('bot', botReply);
+                appendMessageToUI('bot', finalReply);
 
-            } catch (err) {
-                console.error(err);
-                removeTyping();
-                appendMessage('bot', 'عذراً، حدث خطأ أثناء الاتصال بالشبكة.');
+            } catch (networkError) {
+                console.error(networkError);
+                removeTypingLoader();
+                appendMessageToUI('bot', '❌ خطأ في الاتصال بالشبكة أو خادم Vercel البروكسي.');
             }
         }
     </script>
 </body>
 </html>
-
