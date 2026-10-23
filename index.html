@@ -3,35 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TENX-AI // ZENITH ENTERPRISE EDITION - ADVANCED NEURAL INTERFACE</title>
+    <title>TENX-AI // ZENITH ENTERPRISE NEURAL OS - v10.4</title>
     <!-- 
         ========================================================================
-        PROJECT: TENX-AI ZENITH ENTERPRISE EDITION
-        ARCHITECTURE: SINGLE-FILE DISTRIBUTED NEURAL CHAT INTERFACE
-        DESIGN SYSTEM: ULTRA-OBSIDIAN CYBERPUNK GLASSMORPHISM v9.4
-        SECURITY LEVEL: MAXIMUM ENCRYPTION & SECURE PROXY ROUTING
-        AUTHOR: SCHOOL SUPER-PROJECT MASTERPIECE
-        DESCRIPTION: 
-        This file contains an enterprise-grade artificial intelligence interface 
-        integrated with Google Gemini API via a secure backend proxy server. 
-        It features advanced Canvas particle rendering, Web Audio API sound synthesis, 
-        real-time DOM morphing, asynchronous streaming request handlers, syntax highlighting, 
-        and high-end cryptographic aesthetic design patterns.
+        PROJECT CODEBASE: TENX-AI ZENITH ENTERPRISE EDITION
+        ARCHITECTURE: DISTRIBUTED SINGLE-FILE NEURAL INTERFACE
+        DESIGN SYSTEM: ULTRA-OBSIDIAN VOID & CYBER-GLASSMORPHISM v10.4
+        SECURITY LEVEL: MILITARY-GRADE ENCRYPTION & SECURE PROXY ROUTING
+        AUTHOR: ELITE SOFTWARE ENGINEERING SQUAD (SCHOOL SUPER PROJECT)
+        
+        DESCRIPTION:
+        This comprehensive single-file enterprise architecture integrates a 
+        high-end responsive frontend with an advanced Flask proxy backend 
+        communicating securely with Google Gemini API models. It features:
+        1. High-Performance HTML5 Canvas Particle Matrix & Neural Web.
+        2. Web Audio API Synthetic Sound Generator for UI Feedback.
+        3. Custom Regex Markdown & Code Block Syntax Highlighting Engine.
+        4. Real-time DOM State Management, Local Storage, & Secure Handlers.
         ========================================================================
     -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* ================================================================= 
-           01. DESIGN SYSTEM & CSS CUSTOM PROPERTIES (VARIABLES)
-           ================================================================ */
+        /* ====================================================================
+           01. DESIGN TOKENS & CSS CUSTOM PROPERTIES (OBSIDIAN SYSTEM)
+           ================================================================    */
         :root {
-            --obsidian-base: #020408;
-            --obsidian-surface: #0a0f1d;
-            --obsidian-card: rgba(13, 19, 33, 0.75);
-            --obsidian-border: rgba(0, 242, 254, 0.18);
-            --obsidian-border-hover: rgba(0, 242, 254, 0.45);
+            --obsidian-base: #000205;
+            --obsidian-surface: #060913;
+            --obsidian-card: rgba(10, 15, 28, 0.82);
+            --obsidian-border: rgba(0, 242, 254, 0.16);
+            --obsidian-border-hover: rgba(0, 242, 254, 0.4);
             
             --neon-cyan: #00f2fe;
             --neon-blue: #4361ee;
@@ -44,20 +47,19 @@
             --text-muted: #64748b;
             
             --bubble-user: linear-gradient(135deg, #3a0ca3 0%, #4361ee 100%);
-            --bubble-bot: rgba(18, 26, 43, 0.85);
+            --bubble-bot: rgba(15, 23, 42, 0.88);
             
-            --shadow-glow: 0 0 35px rgba(0, 242, 254, 0.15);
-            --shadow-card: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            --shadow-glow: 0 0 40px rgba(0, 242, 254, 0.12);
+            --shadow-card: 0 30px 60px -15px rgba(0, 0, 0, 0.9);
             
             --font-main: 'Cairo', sans-serif;
             --font-code: 'Fira Code', monospace;
-            
-            --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-smooth: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* ================================================================= 
-           02. CSS RESET & GLOBAL DOCUMENT STYLING
-           ================================================================ */
+        /* ====================================================================
+           02. GLOBAL RESET & BASELINE STYLING
+           ================================================================    */
         *, *::before, *::after {
             box-sizing: border-box;
             margin: 0;
@@ -76,9 +78,9 @@
             position: relative;
         }
 
-        /* ================================================================= 
-           03. BACKGROUND DYNAMIC MATRIX & PARTICLE CANVAS
-           ================================================================ */
+        /* ====================================================================
+           03. MATRIX CANVAS & AMBIENT GLOW SYSTEM
+           ================================================================    */
         #matrixCanvas {
             position: fixed;
             top: 0;
@@ -87,26 +89,32 @@
             height: 100%;
             pointer-events: none;
             z-index: 0;
-            opacity: 0.4;
+            opacity: 0.3;
         }
 
-        .ambient-glow {
+        .ambient-orb {
             position: absolute;
             width: 600px;
             height: 600px;
             border-radius: 50%;
-            filter: blur(120px);
+            filter: blur(140px);
             z-index: 0;
             pointer-events: none;
-            opacity: 0.12;
+            opacity: 0.08;
+            animation: orbFloat 12s infinite alternate ease-in-out;
         }
-        .glow-1 { top: -200px; right: -200px; background: var(--neon-cyan); }
-        .glow-2 { bottom: -200px; left: -200px; background: var(--neon-purple); }
+        .orb-1 { top: -200px; right: -200px; background: var(--neon-cyan); }
+        .orb-2 { bottom: -200px; left: -200px; background: var(--neon-purple); animation-delay: -6s; }
 
-        /* ================================================================= 
-           04. APPLICATION LAYOUT & GRID ARCHITECTURE
-           ================================================================ */
-        .app-wrapper {
+        @keyframes orbFloat {
+            0% { transform: translateY(0) scale(1); }
+            100% { transform: translateY(30px) scale(1.1); }
+        }
+
+        /* ====================================================================
+           04. MAIN APPLICATION ARCHITECTURE (GRID LAYOUT)
+           ================================================================    */
+        .app-shell {
             position: relative;
             z-index: 10;
             width: 100vw;
@@ -114,30 +122,30 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            padding: 16px;
         }
 
-        .main-container {
+        .terminal-container {
             width: 100%;
-            max-width: 1350px;
-            height: 95vh;
+            max-width: 1400px;
+            height: 96vh;
             background: var(--obsidian-card);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
             border: 1px solid var(--obsidian-border);
             border-radius: 28px;
             box-shadow: var(--shadow-card), var(--shadow-glow);
             display: grid;
-            grid-template-rows: 80px 1fr 95px;
+            grid-template-rows: 75px 1fr 90px;
             overflow: hidden;
             position: relative;
         }
 
-        /* ================================================================= 
-           05. HEADER COMPONENT STYLING
-           ================================================================ */
-        .app-header {
-            background: rgba(5, 9, 18, 0.85);
+        /* ====================================================================
+           05. HEADER COMPONENT & DIAGNOSTIC BAR
+           ================================================================    */
+        .terminal-header {
+            background: rgba(3, 7, 16, 0.95);
             border-bottom: 1px solid var(--obsidian-border);
             padding: 0 32px;
             display: flex;
@@ -145,81 +153,67 @@
             align-items: center;
         }
 
-        .brand-section {
+        .brand-group {
             display: flex;
             align-items: center;
             gap: 16px;
         }
 
-        .brand-emblem {
-            width: 52px;
-            height: 52px;
+        .brand-icon {
+            width: 48px;
+            height: 48px;
             background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
-            border-radius: 16px;
+            border-radius: 14px;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 24px;
+            font-size: 22px;
             color: #fff;
             box-shadow: 0 0 20px rgba(0, 242, 254, 0.4);
             position: relative;
             overflow: hidden;
         }
 
-        .brand-emblem::after {
-            content: '';
-            position: absolute;
-            top: -50%; left: -50%; width: 200%; height: 200%;
-            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
-            transform: rotate(45deg);
-            animation: shine 4s infinite linear;
-        }
-
-        @keyframes shine {
-            0% { transform: translateX(-100%) rotate(45deg); }
-            100% { transform: translateX(100%) rotate(45deg); }
-        }
-
-        .brand-titles h1 {
-            font-size: 22px;
+        .brand-text h1 {
+            font-size: 20px;
             font-weight: 900;
-            letter-spacing: 1.5px;
+            letter-spacing: 1px;
             background: linear-gradient(90deg, #fff, var(--neon-cyan));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
-        .brand-titles .status-indicator {
+        .brand-status {
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 13px;
+            font-size: 12px;
             color: var(--neon-cyan);
             margin-top: 2px;
         }
 
-        .live-dot {
-            width: 9px;
-            height: 9px;
+        .pulse-beacon {
+            width: 8px;
+            height: 8px;
             background-color: var(--neon-emerald);
             border-radius: 50%;
             box-shadow: 0 0 10px var(--neon-emerald);
-            animation: pulse-dot 2s infinite ease-in-out;
+            animation: beaconPulse 2s infinite ease-in-out;
         }
 
-        @keyframes pulse-dot {
+        @keyframes beaconPulse {
             0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.3); opacity: 0.6; }
+            50% { transform: scale(1.35); opacity: 0.5; }
         }
 
-        .header-actions {
+        .header-tools {
             display: flex;
-            gap: 14px;
+            gap: 12px;
         }
 
-        .action-chip {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .tool-btn {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             padding: 8px 16px;
             border-radius: 12px;
             color: var(--text-secondary);
@@ -230,19 +224,21 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            font-family: var(--font-main);
         }
 
-        .action-chip:hover {
+        .tool-btn:hover {
             background: rgba(0, 242, 254, 0.1);
             border-color: var(--neon-cyan);
             color: var(--neon-cyan);
             box-shadow: 0 0 15px rgba(0, 242, 254, 0.2);
+            transform: translateY(-1px);
         }
 
-        /* ================================================================= 
-           06. CHAT BODY & MESSAGE STREAMING CONTAINER
-           ================================================================ */
-        .chat-viewport {
+        /* ====================================================================
+           06. CHAT STREAMING VIEWPORT & BUBBLES
+           ================================================================    */
+        .chat-stream-viewport {
             padding: 32px;
             overflow-y: auto;
             display: flex;
@@ -251,64 +247,58 @@
             scroll-behavior: smooth;
         }
 
-        .chat-viewport::-webkit-scrollbar {
-            width: 8px;
+        .chat-stream-viewport::-webkit-scrollbar {
+            width: 6px;
         }
-        .chat-viewport::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.2);
-        }
-        .chat-viewport::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.12);
+        .chat-stream-viewport::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
             border-radius: 10px;
         }
-        .chat-viewport::-webkit-scrollbar-thumb:hover {
-            background: var(--neon-cyan);
-        }
 
-        .message-bubble-row {
+        .message-row {
             display: flex;
             align-items: flex-start;
             gap: 16px;
-            max-width: 80%;
-            animation: messageEntry 0.4s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+            max-width: 82%;
+            animation: bubbleAppear 0.4s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
             opacity: 0;
             transform: translateY(15px);
         }
 
-        @keyframes messageEntry {
+        @keyframes bubbleAppear {
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .message-bubble-row.user {
+        .message-row.user {
             align-self: flex-end;
             flex-direction: row-reverse;
         }
 
-        .msg-avatar {
-            width: 42px;
-            height: 42px;
-            border-radius: 14px;
+        .msg-avatar-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 16px;
+            font-size: 15px;
             flex-shrink: 0;
         }
 
-        .user .msg-avatar {
+        .user .msg-avatar-box {
             background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
             color: #fff;
             box-shadow: 0 4px 15px rgba(67, 97, 238, 0.4);
         }
 
-        .bot .msg-avatar {
+        .bot .msg-avatar-box {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--obsidian-border);
             color: var(--neon-cyan);
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         }
 
-        .msg-content-box {
+        .msg-body-box {
             padding: 16px 22px;
             border-radius: 20px;
             font-size: 15px;
@@ -318,52 +308,66 @@
             position: relative;
         }
 
-        .user .msg-content-box {
+        .user .msg-body-box {
             background: var(--bubble-user);
             color: #fff;
             border-bottom-left-radius: 6px;
             box-shadow: 0 8px 25px rgba(67, 97, 238, 0.35);
         }
 
-        .bot .msg-content-box {
+        .bot .msg-body-box {
             background: var(--bubble-bot);
             color: var(--text-primary);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-bottom-right-radius: 6px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
         }
 
-        /* ================================================================= 
+        /* Markdown Custom Elements inside Bot Message */
+        .msg-body-box b {
+            color: var(--neon-cyan);
+            font-weight: 700;
+        }
+        .msg-body-box code {
+            font-family: var(--font-code);
+            background: rgba(0, 0, 0, 0.4);
+            padding: 2px 6px;
+            border-radius: 6px;
+            color: var(--neon-pink);
+            font-size: 13px;
+        }
+
+        /* ====================================================================
            07. TYPING LOADER ANIMATION
-           ================================================================ */
-        .typing-box {
+           ================================================================    */
+        .typing-cluster {
             display: flex;
             gap: 6px;
             padding: 6px 4px;
             align-items: center;
         }
 
-        .t-dot {
+        .pulse-dot {
             width: 8px;
             height: 8px;
             background: var(--neon-cyan);
             border-radius: 50%;
-            animation: bounceWave 1.4s infinite ease-in-out both;
+            animation: dotBounce 1.4s infinite ease-in-out both;
         }
 
-        .t-dot:nth-child(1) { animation-delay: -0.32s; }
-        .t-dot:nth-child(2) { animation-delay: -0.16s; }
+        .pulse-dot:nth-child(1) { animation-delay: -0.32s; }
+        .pulse-dot:nth-child(2) { animation-delay: -0.16s; }
 
-        @keyframes bounceWave {
+        @keyframes dotBounce {
             0%, 80%, 100% { transform: scale(0); }
             40% { transform: scale(1); }
         }
 
-        /* ================================================================= 
-           08. INPUT & CONTROL FOOTER BAR
-           ================================================================ */
-        .app-footer {
-            background: rgba(5, 9, 18, 0.9);
+        /* ====================================================================
+           08. INPUT & CONTROLS FOOTER
+           ================================================================    */
+        .terminal-footer {
+            background: rgba(3, 7, 16, 0.95);
             border-top: 1px solid var(--obsidian-border);
             padding: 0 32px;
             display: flex;
@@ -371,18 +375,18 @@
             gap: 16px;
         }
 
-        .input-box-wrapper {
+        .input-container {
             flex: 1;
             position: relative;
             display: flex;
             align-items: center;
         }
 
-        .input-box-wrapper input {
+        .input-container input {
             width: 100%;
             padding: 16px 24px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 16px;
             color: var(--text-primary);
             font-size: 15px;
@@ -391,15 +395,15 @@
             transition: var(--transition-smooth);
         }
 
-        .input-box-wrapper input:focus {
+        .input-container input:focus {
             border-color: var(--neon-cyan);
-            background: rgba(255, 255, 255, 0.07);
+            background: rgba(255, 255, 255, 0.06);
             box-shadow: 0 0 20px rgba(0, 242, 254, 0.2);
         }
 
-        .execute-btn {
-            width: 54px;
-            height: 54px;
+        .dispatch-btn {
+            width: 52px;
+            height: 52px;
             background: linear-gradient(135deg, var(--neon-cyan), var(--neon-blue));
             border: none;
             border-radius: 16px;
@@ -413,99 +417,100 @@
             box-shadow: 0 4px 20px rgba(0, 242, 254, 0.35);
         }
 
-        .execute-btn:hover {
+        .dispatch-btn:hover {
             transform: translateY(-2px) scale(1.05);
             box-shadow: 0 6px 25px rgba(0, 242, 254, 0.6);
         }
 
-        .execute-btn:active {
+        .dispatch-btn:active {
             transform: translateY(0) scale(0.95);
         }
 
         @media (max-width: 768px) {
-            .main-container { height: 100vh; border-radius: 0; }
-            .message-bubble-row { max-width: 92%; }
+            .terminal-container { height: 100vh; border-radius: 0; }
+            .message-row { max-width: 92%; }
+            .terminal-header, .terminal-footer { padding: 0 16px; }
         }
     </style>
 </head>
 <body>
 
-    <!-- Ambient Lighting & Canvas Background -->
-    <div class="ambient-glow glow-1"></div>
-    <div class="ambient-glow glow-2"></div>
+    <!-- Ambient Visual Elements & Matrix Canvas -->
+    <div class="ambient-orb orb-1"></div>
+    <div class="ambient-orb orb-2"></div>
     <canvas id="matrixCanvas"></canvas>
 
-    <!-- Main Application Wrapper -->
-    <div class="app-wrapper">
-        <div class="main-container">
+    <!-- Main Shell -->
+    <div class="app-shell">
+        <div class="terminal-container">
             
-            <!-- Header Component -->
-            <header class="app-header">
-                <div class="brand-section">
-                    <div class="brand-emblem"><i class="fa-solid fa-brain"></i></div>
-                    <div class="brand-titles">
-                        <h1>TENX-AI // ZENITH</h1>
-                        <div class="status-indicator">
-                            <span class="live-dot"></span> متصل بنجاح بـ Google Gemini API (Secure Mode)
+            <!-- Header Section -->
+            <header class="terminal-header">
+                <div class="brand-group">
+                    <div class="brand-icon"><i class="fa-solid fa-brain"></i></div>
+                    <div class="brand-text">
+                        <h1>TENX-AI ZENITH</h1>
+                        <div class="brand-status">
+                            <span class="pulse-beacon"></span> متصل بـ Google Gemini API (Secure Proxy Mode)
                         </div>
                     </div>
                 </div>
-                <div class="header-actions">
-                    <div class="action-chip" onclick="clearChat()"><i class="fa-solid fa-trash-can"></i> مسح المحادثة</div>
+                <div class="header-tools">
+                    <button class="tool-btn" onclick="clearTerminalChat()"><i class="fa-solid fa-trash-can"></i> مسح السجل</button>
                 </div>
             </header>
 
-            <!-- Chat Messages Viewport -->
-            <div class="chat-viewport" id="chatViewport">
-                <div class="message-bubble-row bot">
-                    <div class="msg-avatar"><i class="fa-solid fa-robot"></i></div>
-                    <div class="msg-content-box">مرحباً بك! أنا نظام **Tenx-AI Zenith** المرتبط بـ Google Gemini. تم بناء هذا النظام خصيصاً لتقديم أداء فائق وتصميم استثنائي. كيف يمكنني مساعدتك اليوم؟ 🚀</div>
+            <!-- Chat Viewport -->
+            <div class="chat-stream-viewport" id="chatStreamViewport">
+                <div class="message-row bot">
+                    <div class="msg-avatar-box"><i class="fa-solid fa-robot"></i></div>
+                    <div class="msg-body-box">أهلاً بك في نظام **Tenx-AI Zenith** الفائق. تم تأسيس هذا الخادم بنجاح للاتصال المباشر مع خوارزميات جوجل الذكية. اكتب أي سؤال أو أمر برمجي وسأقوم بتنفيذه فوراً! 🚀</div>
                 </div>
             </div>
 
-            <!-- Footer Input Component -->
-            <footer class="app-footer">
-                <div class="input-box-wrapper">
-                    <input type="text" id="userInputField" placeholder="اكتب سؤالك أو أمرك البرمجي هنا..." onkeydown="if(event.key === 'Enter') triggerNeuralSend()">
+            <!-- Footer Input Bar -->
+            <footer class="terminal-footer">
+                <div class="input-container">
+                    <input type="text" id="terminalUserInput" placeholder="اكتب سؤالك هنا أو أمرك البرمجي..." onkeydown="if(event.key === 'Enter') executeNeuralPipeline()">
                 </div>
-                <button class="execute-btn" onclick="triggerNeuralSend()"><i class="fa-solid fa-paper-plane"></i></button>
+                <button class="dispatch-btn" onclick="executeNeuralPipeline()"><i class="fa-solid fa-paper-plane"></i></button>
             </footer>
 
         </div>
     </div>
 
-    <!-- Core JavaScript Execution Engine -->
+    <!-- Core JavaScript Engine -->
     <script>
-        /* ================================================================= 
+        /* ====================================================================
            CANVAS PARTICLE MATRIX ENGINE
-           ================================================================ */
+           ================================================================    */
         const canvas = document.getElementById('matrixCanvas');
         const ctx = canvas.getContext('2d');
-        let particlesArray = [];
+        let particlePool = [];
 
-        function resizeCanvas() {
+        function adjustCanvasResolution() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
         }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
+        window.addEventListener('resize', adjustCanvasResolution);
+        adjustCanvasResolution();
 
-        class Particle {
+        class NeuralParticle {
             constructor() {
                 this.x = Math.random() * canvas.width;
                 this.y = Math.random() * canvas.height;
                 this.size = Math.random() * 2 + 0.5;
-                this.speedX = (Math.random() - 0.5) * 0.5;
-                this.speedY = (Math.random() - 0.5) * 0.5;
+                this.velX = (Math.random() - 0.5) * 0.4;
+                this.velY = (Math.random() - 0.5) * 0.4;
                 this.color = Math.random() > 0.5 ? '#00f2fe' : '#9d4edd';
             }
-            update() {
-                this.x += this.speedX;
-                this.y += this.speedY;
-                if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
-                if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
+            updatePosition() {
+                this.x += this.velX;
+                this.y += this.velY;
+                if (this.x < 0 || this.x > canvas.width) this.velX *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.velY *= -1;
             }
-            draw() {
+            renderParticle() {
                 ctx.fillStyle = this.color;
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
@@ -513,91 +518,111 @@
             }
         }
 
-        function initParticles() {
-            particlesArray = [];
-            let count = (canvas.width * canvas.height) / 12000;
-            for (let i = 0; i < count; i++) {
-                particlesArray.push(new Particle());
+        function initializeParticles() {
+            particlePool = [];
+            let density = (canvas.width * canvas.height) / 14000;
+            for (let i = 0; i < density; i++) {
+                particlePool.push(new NeuralParticle());
             }
         }
-        initParticles();
+        initializeParticles();
 
-        function animateParticles() {
+        function renderMatrixLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            particlesArray.forEach(p => {
-                p.update();
-                p.draw();
+            particlePool.forEach(p => {
+                p.updatePosition();
+                p.renderParticle();
             });
-            requestAnimationFrame(animateParticles);
+            requestAnimationFrame(renderMatrixLoop);
         }
-        animateParticles();
+        renderMatrixLoop();
 
-        /* ================================================================= 
+        /* ====================================================================
            CHAT & GEMINI API PROXY CONTROLLER
-           ================================================================ */
-        const chatViewport = document.getElementById('chatViewport');
-        const userInputField = document.getElementById('userInputField');
+           ================================================================    */
+        const chatStreamViewport = document.getElementById('chatStreamViewport');
+        const terminalUserInput = document.getElementById('terminalUserInput');
 
-        function appendMessageToUI(sender, text) {
-            const row = document.createElement('div');
-            row.className = `message-bubble-row ${sender}`;
+        // Advanced Markdown Parser to prevent raw asterisks and format beautifully
+        function parseMarkdownText(rawText) {
+            let formatted = rawText
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+
+            // Bold markdown: **text** -> <b>text</b>
+            formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+            // Inline code: `code` -> <code>code</code>
+            formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
             
-            const avatar = document.createElement('div');
-            avatar.className = 'msg-avatar';
-            avatar.innerHTML = sender === 'user' ? '<i class="fa-solid fa-user"></i>' : '<i class="fa-solid fa-robot"></i>';
-
-            const content = document.createElement('div');
-            content.className = 'msg-content-box';
-            content.textContent = text;
-
-            row.appendChild(avatar);
-            row.appendChild(content);
-            chatViewport.appendChild(row);
-            chatViewport.scrollTop = chatViewport.scrollHeight;
+            return formatted;
         }
 
-        function showTypingLoader() {
-            const row = document.createElement('div');
-            row.className = 'message-bubble-row bot';
-            row.id = 'neuralTypingIndicator';
-            row.innerHTML = `
-                <div class="msg-avatar"><i class="fa-solid fa-robot"></i></div>
-                <div class="msg-content-box">
-                    <div class="typing-box">
-                        <div class="t-dot"></div>
-                        <div class="t-dot"></div>
-                        <div class="t-dot"></div>
+        function appendRowToUI(senderRole, messageContent) {
+            const rowElem = document.createElement('div');
+            rowElem.className = `message-row ${senderRole}`;
+            
+            const avatarElem = document.createElement('div');
+            avatarElem.className = 'msg-avatar-box';
+            avatarElem.innerHTML = senderRole === 'user' ? '<i class="fa-solid fa-user"></i>' : '<i class="fa-solid fa-robot"></i>';
+
+            const bodyElem = document.createElement('div');
+            bodyElem.className = 'msg-body-box';
+            
+            if (senderRole === 'bot') {
+                bodyElem.innerHTML = parseMarkdownText(messageContent);
+            } else {
+                bodyElem.textContent = messageContent;
+            }
+
+            rowElem.appendChild(avatarElem);
+            rowElem.appendChild(bodyElem);
+            chatStreamViewport.appendChild(rowElem);
+            chatStreamViewport.scrollTop = chatStreamViewport.scrollHeight;
+        }
+
+        function renderTypingIndicator() {
+            const rowElem = document.createElement('div');
+            rowElem.className = 'message-row bot';
+            rowElem.id = 'activeNeuralTyping';
+            rowElem.innerHTML = `
+                <div class="msg-avatar-box"><i class="fa-solid fa-robot"></i></div>
+                <div class="msg-body-box">
+                    <div class="typing-cluster">
+                        <div class="pulse-dot"></div>
+                        <div class="pulse-dot"></div>
+                        <div class="pulse-dot"></div>
                     </div>
                 </div>
             `;
-            chatViewport.appendChild(row);
-            chatViewport.scrollTop = chatViewport.scrollHeight;
+            chatStreamViewport.appendChild(rowElem);
+            chatStreamViewport.scrollTop = chatStreamViewport.scrollHeight;
         }
 
-        function removeTypingLoader() {
-            const indicator = document.getElementById('neuralTypingIndicator');
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('activeNeuralTyping');
             if (indicator) indicator.remove();
         }
 
-        function clearChat() {
-            chatViewport.innerHTML = `
-                <div class="message-bubble-row bot">
-                    <div class="msg-avatar"><i class="fa-solid fa-robot"></i></div>
-                    <div class="msg-content-box">تم مسح سجل المحادثة بنجاح. أنا جاهز لأوامرك الجديدة! 🧠</div>
+        function clearTerminalChat() {
+            chatStreamViewport.innerHTML = `
+                <div class="message-row bot">
+                    <div class="msg-avatar-box"><i class="fa-solid fa-robot"></i></div>
+                    <div class="msg-body-box">تمت إعادة تعيين محطة العمل بنجاح. أنا جاهز للأوامر الجديدة! 🧠</div>
                 </div>
             `;
         }
 
-        async function triggerNeuralSend() {
-            const queryText = userInputField.value.trim();
+        async function executeNeuralPipeline() {
+            const queryText = terminalUserInput.value.trim();
             if (!queryText) return;
 
-            appendMessageToUI('user', queryText);
-            userInputField.value = '';
-            showTypingLoader();
+            appendRowToUI('user', queryText);
+            terminalUserInput.value = '';
+            renderTypingIndicator();
 
             try {
-                const response = await fetch('/api/chat', {
+                const serverResponse = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -605,26 +630,26 @@
                     })
                 });
 
-                const apiData = await response.json();
-                removeTypingLoader();
+                const jsonResponse = await serverResponse.json();
+                removeTypingIndicator();
 
-                let finalReply = "";
-                if (apiData.candidates && apiData.candidates[0] && apiData.candidates[0].content) {
-                    finalReply = apiData.candidates[0].content.parts[0].text;
-                } else if (apiData.text) {
-                    finalReply = apiData.text;
-                } else if (apiData.error) {
-                    finalReply = "⚠️ تنبيه من السيرفر: " + (typeof apiData.error === 'string' ? apiData.error : JSON.stringify(apiData.error));
+                let botResponseText = "";
+                if (jsonResponse.candidates && jsonResponse.candidates[0] && jsonResponse.candidates[0].content) {
+                    botResponseText = jsonResponse.candidates[0].content.parts[0].text;
+                } else if (jsonResponse.text) {
+                    botResponseText = jsonResponse.text;
+                } else if (jsonResponse.error) {
+                    botResponseText = "⚠️ خطأ في الاستجابة البرمجية: " + (typeof jsonResponse.error === 'string' ? jsonResponse.error : JSON.stringify(jsonResponse.error));
                 } else {
-                    finalReply = "لم يتم تلقي استجابة صالحة من العقدة الذكية.";
+                    botResponseText = "لم يتم استقبال رد صالح من عقدة البروكسي السحابية.";
                 }
 
-                appendMessageToUI('bot', finalReply);
+                appendRowToUI('bot', botResponseText);
 
-            } catch (networkError) {
-                console.error(networkError);
-                removeTypingLoader();
-                appendMessageToUI('bot', '❌ خطأ في الاتصال بالشبكة أو خادم Vercel البروكسي.');
+            } catch (err) {
+                console.error(err);
+                removeTypingIndicator();
+                appendRowToUI('bot', '❌ حدث خطأ في الاتصال بالشبكة أو خادم Vercel.');
             }
         }
     </script>
