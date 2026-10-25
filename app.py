@@ -179,7 +179,7 @@ def chat():
             }
         })
 
-    model = "gemini-3.5-flash-lite"
+    model = model = "gemini-3.6-flash"
     url = (
         "https://generativelanguage.googleapis.com/"
         f"v1beta/models/{model}:generateContent"
