@@ -10,7 +10,10 @@ app.config["MAX_CONTENT_LENGTH"] = 7 * 1024 * 1024
 
 @app.get("/")
 def home():
-    return send_from_directory("public", "index.html")
+    return send_from_directory(
+        os.path.join(app.root_path, "public"),
+        "index.html"
+    )
 
 
 @app.get("/api/health")
