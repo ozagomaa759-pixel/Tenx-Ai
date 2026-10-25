@@ -100,7 +100,12 @@ textarea::placeholder{color:#777780}.send{width:42px;height:42px;border:0;border
   <section id="messages" aria-live="polite"></section>
 </main>
 <div class="composer-wrap">
-  <form class="composer" id="chatForm">
+ <form class="composer" id="chatForm">
+  
+<input id="imageInput" type="file" accept="image/*" hidden>
+<button type="button" id="imageButton" aria-label="Add image"
+style="width:42px;height:42px;border:1px solid #38383f;border-radius:13px;background:#202024;color:#a3e635;font-size:24px;cursor:pointer;flex-shrink:0">+</button>
+ 
     <textarea id="prompt" rows="1" placeholder="Message TENX AI..." aria-label="Message TENX AI"></textarea>
     <button class="send" id="send" aria-label="Send message" type="submit">↑</button>
   </form>
@@ -109,8 +114,38 @@ textarea::placeholder{color:#777780}.send{width:42px;height:42px;border:0;border
 </div>
 <script>
 const form=document.getElementById('chatForm'), input=document.getElementById('prompt'), send=document.getElementById('send'), messagesEl=document.getElementById('messages'), welcome=document.getElementById('welcome');
-let history=[];
-  
+let history = [];
+
+const imageInput = document.getElementById('imageInput');
+const imageButton = document.getElementById('imageButton');
+
+let selectedImage = null;
+
+imageButton.addEventListener('click', () => {
+  imageInput.click();
+});
+
+imageInput.addEventListener('change', () => {
+  const file = imageInput.files[0];
+  if (!file) return;
+
+  if (!file.type.startsWith('image/')) {
+    alert('Please choose an image.');
+    imageInput.value = '';
+    return;
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    alert('Please choose an image smaller than 5 MB.');
+    imageInput.value = '';
+    return;
+  }
+
+  selectedImage = file;
+  imageButton.textContent = '✓';
+  imageButton.style.background = '#29351d';
+});
+
 function renderMessage(element, text) {
   element.replaceChildren();
 
