@@ -190,25 +190,95 @@ function addMessage(role, text, isError = false) {
   return bubble;
 }
  
-
-async function sendMessage(text){
-  text=text.trim();if(!text||send.disabled)return;
-  welcome.style.display='none';
-  addMessage('user',text);history.push({role:'user',content:text});
-  input.value='';input.style.height='auto';send.disabled=true;send.textContent='…';
-  const waiting=addMessage('assistant','Thinking…');waiting.classList.add('typing');
-  try{
-    const response=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:history})});
-    const data=await response.json().catch(()=>({error:'The server returned an unexpected response. Check the Vercel deployment and API route.'}));
-    if(!response.ok)throw new Error(data.error||('Request failed ('+response.status+').'));
-    if(typeof data.reply!=='string'||!data.reply.trim())throw new Error('The AI returned an empty response. Try again.');
-   waiting.classList.remove('typing');renderMessage(waiting,data.reply);history.push({role:'assistant',content:data.reply});
-  }catch(e){
-    waiting.classList.remove('typing');waiting.classList.add('error');
-    waiting.textContent='Could not get a reply: '+(e.message||'Unknown error')+' You can check /api/health and your Vercel logs.';
-    history.pop();
-  }finally{send.disabled=false;send.textContent='↑';input.focus();}
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result);
+      resolve(result.split(',')[1]);
+    };
+    reader.onerror = () => reject(new Error('Could not read the image.'));
+    reader.readAsDataURL(file);
+  });
 }
+
+async function sendMessage(text) {
+  text = text.trim();
+  if ((!text && !selectedImage) || send.disabled) return;
+
+  if (!text && selectedImage) {
+    text = 'Please analyze this image and explain what you see.';
+  }
+
+  welcome.style.display = 'none';
+
+  addMessage(
+    'user',
+    selectedImage ? '📷 Image attached\n' + text : text
+  );
+
+  history.push({ role: 'user', content: text });
+
+  input.value = '';
+  input.style.height = 'auto';
+  send.disabled = true;
+  send.textContent = '…';
+
+  const waiting = addMessage('assistant', 'Thinking…');
+  waiting.classList.add('typing');
+
+  try {
+    const body = { messages: history };
+
+    if (selectedImage) {
+      body.image = {
+        mimeType: selectedImage.type,
+        data: await fileToBase64(selectedImage)
+      };
+    }
+
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    const data = await response.json().catch(() => ({
+      error: 'Unexpected server response.'
+    }));
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Request failed (' + response.status + ').');
+    }
+
+    if (typeof data.reply !== 'string' || !data.reply.trim()) {
+      throw new Error('The AI returned an empty response. Try again.');
+    }
+
+    waiting.classList.remove('typing');
+    renderMessage(waiting, data.reply);
+    history.push({ role: 'assistant', content: data.reply });
+
+    selectedImage = null;
+    imageInput.value = '';
+    imageButton.textContent = '+';
+    imageButton.style.background = '#202024';
+
+  } catch (e) {
+    waiting.classList.remove('typing');
+    waiting.classList.add('error');
+    waiting.textContent = 'Could not get a reply: ' +
+      (e.message || 'Unknown error') +
+      ' You can check /api/health and your Vercel logs.';
+    history.pop();
+
+  } finally {
+    send.disabled = false;
+    send.textContent = '↑';
+    input.focus();
+  }
+}
+
 form.addEventListener('submit',e=>{e.preventDefault();sendMessage(input.value)});
 input.addEventListener('input',()=>{input.style.height='auto';input.style.height=Math.min(input.scrollHeight,160)+'px'});
 input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();form.requestSubmit()}});
