@@ -1,8 +1,10 @@
 import os
+import base64
 import requests
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024
 
 @app.get("/")
 def home():
@@ -40,8 +42,40 @@ def chat():
                 "parts": [{"text": content}]
             })
 
-    if not contents or contents[-1]["role"] != "user":
+        if not contents or contents[-1]["role"] != "user":
         return jsonify(error="Please send a new message."), 400
+
+    image = body.get("image")
+
+    if image is not None:
+        if not isinstance(image, dict):
+            return jsonify(error="Invalid image data."), 400
+
+        mime_type = image.get("mimeType", "")
+        image_data = image.get("data", "")
+
+        if mime_type not in ("image/jpeg", "image/png", "image/webp"):
+            return jsonify(
+                error="Please use a JPG, PNG, or WebP image."
+            ), 400
+
+        if not isinstance(image_data, str) or not image_data:
+            return jsonify(error="No image data received."), 400
+
+        try:
+            decoded_image = base64.b64decode(image_data, validate=True)
+        except Exception:
+            return jsonify(error="The image data is invalid."), 400
+
+        if len(decoded_image) > 5 * 1024 * 1024:
+            return jsonify(error="The image must be smaller than 5 MB."), 400
+
+        contents[-1]["parts"].append({
+            "inline_data": {
+                "mime_type": mime_type,
+                "data": image_data
+            }
+        })
 
     url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent"
     payload = {
