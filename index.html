@@ -37,7 +37,6 @@ h1{font-size:clamp(30px,6vw,48px);letter-spacing:-1.6px;margin:0 0 12px}.glow{co
   white-space:pre-wrap;
   overflow-wrap:anywhere;
   max-width:calc(100% - 42px);
-  direction:auto;
   unicode-bidi:plaintext;
   text-align:start;
 }
@@ -46,6 +45,22 @@ h1{font-size:clamp(30px,6vw,48px);letter-spacing:-1.6px;margin:0 0 12px}.glow{co
   text-align:left;
   white-space:pre;
   overflow-x:auto;
+  background:#09090b;
+  border:1px solid #303038;
+  border-radius:10px;
+  padding:12px;
+  margin:12px 0;
+  max-width:100%;
+  -webkit-overflow-scrolling:touch;
+}
+
+.bubble pre code{
+  display:block;
+  white-space:pre;
+  overflow-wrap:normal;
+  word-break:normal;
+  font-size:13px;
+  line-height:1.7;
 }
 .bubble code{
   direction:ltr;
@@ -95,12 +110,43 @@ textarea::placeholder{color:#777780}.send{width:42px;height:42px;border:0;border
 <script>
 const form=document.getElementById('chatForm'), input=document.getElementById('prompt'), send=document.getElementById('send'), messagesEl=document.getElementById('messages'), welcome=document.getElementById('welcome');
 let history=[];
-function addMessage(role,text,isError=false){
-  const row=document.createElement('div');row.className='msg '+(role==='user'?'user':'assistant');
-  const avatar=document.createElement('div');avatar.className='avatar';avatar.textContent=role==='user'?'YOU':'TX';
-  const bubble=document.createElement('div');bubble.className='bubble'+(isError?' error':'');bubble.textContent=text;
-  row.append(avatar,bubble);messagesEl.appendChild(row);row.scrollIntoView({behavior:'smooth',block:'end'});return bubble;
+  function renderMessage(element, text) {
+  element.replaceChildren();
+  const parts = text.split(/```/);
+
+  parts.forEach((part, index) => {
+    if (index % 2 === 1) {
+      const code = part.replace(/^[a-zA-Z0-9+#.-]*\n/, '');
+      const pre = document.createElement('pre');
+      const codeEl = document.createElement('code');
+
+      codeEl.textContent = code;
+      pre.appendChild(codeEl);
+      element.appendChild(pre);
+    } else if (part) {
+      element.appendChild(document.createTextNode(part));
+    }
+  });
 }
+ function addMessage(role,text,isError=false){
+  const row=document.createElement('div');
+  row.className='msg '+(role==='user'?'user':'assistant');
+
+  const avatar=document.createElement('div');
+  avatar.className='avatar';
+  avatar.textContent=role==='user'?'YOU':'TX';
+
+  const bubble=document.createElement('div');
+  bubble.className='bubble'+(isError?' error':'');
+  bubble.dir='auto';
+  renderMessage(bubble,text);
+
+  row.append(avatar,bubble);
+  messagesEl.appendChild(row);
+  row.scrollIntoView({behavior:'smooth',block:'end'});
+  return bubble;
+} 
+
 async function sendMessage(text){
   text=text.trim();if(!text||send.disabled)return;
   welcome.style.display='none';
@@ -112,7 +158,7 @@ async function sendMessage(text){
     const data=await response.json().catch(()=>({error:'The server returned an unexpected response. Check the Vercel deployment and API route.'}));
     if(!response.ok)throw new Error(data.error||('Request failed ('+response.status+').'));
     if(typeof data.reply!=='string'||!data.reply.trim())throw new Error('The AI returned an empty response. Try again.');
-    waiting.classList.remove('typing');waiting.textContent=data.reply;history.push({role:'assistant',content:data.reply});
+   waiting.classList.remove('typing');renderMessage(waiting,data.reply);history.push({role:'assistant',content:data.reply});
   }catch(e){
     waiting.classList.remove('typing');waiting.classList.add('error');
     waiting.textContent='Could not get a reply: '+(e.message||'Unknown error')+' You can check /api/health and your Vercel logs.';
