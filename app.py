@@ -37,12 +37,12 @@ def chat():
             continue
         content = content.strip()[:6000]
         if content:
-            contents.append({
+                        contents.append({
                 "role": "user" if role == "user" else "model",
                 "parts": [{"text": content}]
             })
 
-        if not contents or contents[-1]["role"] != "user":
+    if not contents or contents[-1]["role"] != "user":
         return jsonify(error="Please send a new message."), 400
 
     image = body.get("image")
