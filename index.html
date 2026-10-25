@@ -110,42 +110,51 @@ textarea::placeholder{color:#777780}.send{width:42px;height:42px;border:0;border
 <script>
 const form=document.getElementById('chatForm'), input=document.getElementById('prompt'), send=document.getElementById('send'), messagesEl=document.getElementById('messages'), welcome=document.getElementById('welcome');
 let history=[];
-  function renderMessage(element, text) {
+  
+function renderMessage(element, text) {
   element.replaceChildren();
-  const parts = text.split(/```/);
 
-  parts.forEach((part, index) => {
-    if (index % 2 === 1) {
-      const code = part.replace(/^[a-zA-Z0-9+#.-]*\n/, '');
-      const pre = document.createElement('pre');
-      const codeEl = document.createElement('code');
+  const parts = text.split(/(```[\s\S]*?```)/g);
+
+  parts.forEach((part) => {
+    if (part.startsWith("```") && part.endsWith("```")) {
+      const code = part
+        .replace(/^```[a-zA-Z0-9+#.-]*\n?/, "")
+        .replace(/```$/, "");
+
+      const pre = document.createElement("pre");
+      const codeEl = document.createElement("code");
 
       codeEl.textContent = code;
       pre.appendChild(codeEl);
       element.appendChild(pre);
     } else if (part) {
-      element.appendChild(document.createTextNode(part));
+      const paragraph = document.createElement("span");
+      paragraph.textContent = part;
+      element.appendChild(paragraph);
     }
   });
 }
- function addMessage(role,text,isError=false){
-  const row=document.createElement('div');
-  row.className='msg '+(role==='user'?'user':'assistant');
 
-  const avatar=document.createElement('div');
-  avatar.className='avatar';
-  avatar.textContent=role==='user'?'YOU':'TX';
+function addMessage(role, text, isError = false) {
+  const row = document.createElement("div");
+  row.className = "msg " + (role === "user" ? "user" : "assistant");
 
-  const bubble=document.createElement('div');
-  bubble.className='bubble'+(isError?' error':'');
-  bubble.dir='auto';
-  renderMessage(bubble,text);
+  const avatar = document.createElement("div");
+  avatar.className = "avatar";
+  avatar.textContent = role === "user" ? "YOU" : "TX";
 
-  row.append(avatar,bubble);
+  const bubble = document.createElement("div");
+  bubble.className = "bubble" + (isError ? " error" : "");
+  bubble.dir = "auto";
+  renderMessage(bubble, text);
+
+  row.append(avatar, bubble);
   messagesEl.appendChild(row);
-  row.scrollIntoView({behavior:'smooth',block:'end'});
+  row.scrollIntoView({ behavior: "smooth", block: "end" });
   return bubble;
-} 
+}
+ 
 
 async function sendMessage(text){
   text=text.trim();if(!text||send.disabled)return;
