@@ -27,7 +27,32 @@ h1{font-size:clamp(30px,6vw,48px);letter-spacing:-1.6px;margin:0 0 12px}.glow{co
 .chip:hover{border-color:#84a94b;background:#17191a}.chip b{display:block;font-size:13px;margin-bottom:4px}.chip span{color:var(--muted);font-size:12px}
 #messages{display:flex;flex-direction:column;gap:18px;padding:24px 0;flex:1}
 .msg{display:flex;gap:11px;align-items:flex-start;max-width:100%}.avatar{width:31px;height:31px;flex:0 0 31px;border-radius:11px;background:#19191e;border:1px solid #303038;display:grid;place-items:center;font-size:12px;color:var(--accent);font-weight:800}
-.bubble{padding:12px 15px;border:1px solid #29292f;background:#111114;border-radius:4px 15px 15px 15px;line-height:1.7;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere;max-width:calc(100% - 42px)}
+.bubble{
+  padding:12px 15px;
+  border:1px solid #29292f;
+  background:#111114;
+  border-radius:4px 15px 15px 15px;
+  line-height:1.8;
+  font-size:14px;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  max-width:calc(100% - 42px);
+  direction:auto;
+  unicode-bidi:plaintext;
+  text-align:start;
+}
+.bubble pre{
+  direction:ltr;
+  text-align:left;
+  white-space:pre;
+  overflow-x:auto;
+}
+.bubble code{
+  direction:ltr;
+  unicode-bidi:isolate;
+  text-align:left;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
 .msg.user{flex-direction:row-reverse}.msg.user .avatar{color:#111;background:var(--accent);border-color:var(--accent)}.msg.user .bubble{background:#20231c;border-color:#3d482d;border-radius:15px 4px 15px 15px}
 .error{color:#fecaca;border-color:#7f1d1d;background:#251113}
 .composer-wrap{position:sticky;bottom:0;padding:12px 0 5px;background:linear-gradient(transparent,#09090b 20%)}
