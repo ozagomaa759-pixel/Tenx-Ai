@@ -199,7 +199,7 @@ def chat():
             }
         })
 
-    model = model = "gemini-3.5-flash-lite"
+    model = "gemini-3.5-flash-lite"
     url = (
         "https://generativelanguage.googleapis.com/"
         f"v1beta/models/{model}:generateContent"
