@@ -135,7 +135,7 @@ def chat():
 
     contents = []
 
-    for item in messages[-16:]:
+    for item in messages[-8:]:
         if not isinstance(item, dict):
             continue
 
@@ -191,8 +191,8 @@ def chat():
         },
         "contents": contents,
         "generationConfig": {
-            "temperature": 0.7,
-            "maxOutputTokens": 1500
+            "temperature": 0.4,
+            "maxOutputTokens": 1000
         }
     }
     try:
