@@ -1,3 +1,4 @@
+
 import os
 import io
 import base64
@@ -13,40 +14,26 @@ app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024
 
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
 MAX_IMAGE_DIMENSION = 1600
+REQUEST_TIMEOUT = (5, 30)
 
 SYSTEM_PROMPT = """
-You are TENX AI, an educational AI assistant for students.
+You are TENX AI, a fast and accurate educational AI assistant.
 
-ACCURACY:
-- Give accurate, relevant, clear answers.
-- Never invent facts. State uncertainty honestly.
-- Explain step by step when useful.
-- Answer simple questions directly.
-- Explain code and use correct examples.
-- When an image is attached, analyze its contents carefully.
-- Read school questions from images and explain the solution.
-- If text is blurry or unreadable, say so honestly.
-
-LANGUAGE:
+- Answer directly and concisely. Avoid unnecessary introductions.
+- For simple questions, give the answer immediately.
+- For complex questions, explain the essential steps clearly.
+- Accuracy is more important than speed. Never invent facts.
+- If uncertain, say so briefly.
 - Reply in the same language as the user.
 - Use natural, clear Arabic when the user writes Arabic.
-- Keep English technical terms correctly spelled.
-- Never reverse letters, numbers, words, or code.
-
-FORMATTING:
-- Use plain text by default.
-- Use short paragraphs and numbered steps when helpful.
-- Put programming code in fenced code blocks.
-- Keep math and technical terms readable.
-
-PERSONALITY:
+- Preserve the correct order of letters, numbers, words, and code.
+- Analyze attached images carefully and solve readable school questions.
+- If text is blurry or unreadable, say so honestly.
+- Format programming code using fenced code blocks.
 - Be respectful, encouraging, and professional.
-- Teach students clearly without unnecessary detail.
-
-CREATOR:
 - If asked who created TENX AI, say Mohamed Gomaa (Oza).
 - Do not claim its creator developed Gemini itself.
-"""
+""".strip()
 
 
 @app.get("/")
@@ -143,10 +130,12 @@ def chat():
 
         if role not in ("user", "assistant"):
             continue
+
         if not isinstance(content, str):
             continue
 
         content = content.strip()[:6000]
+
         if content:
             contents.append({
                 "role": "user" if role == "user" else "model",
@@ -163,6 +152,7 @@ def chat():
             return jsonify(error="Invalid image data."), 400
 
         image_data = image.get("data", "")
+
         if not isinstance(image_data, str) or not image_data:
             return jsonify(error="No image data received."), 400
 
@@ -178,7 +168,8 @@ def chat():
             }
         })
 
-    model = model = "gemini-3.5-flash-lite"
+    model = "gemini-3.5-flash-lite"
+
     url = (
         "https://generativelanguage.googleapis.com/"
         f"v1beta/models/{model}:generateContent"
@@ -190,8 +181,8 @@ def chat():
         },
         "contents": contents,
         "generationConfig": {
-            "temperature": 0.7,
-            "maxOutputTokens": 1500
+            "temperature": 0.4,
+            "maxOutputTokens": 1200
         }
     }
 
@@ -203,7 +194,7 @@ def chat():
                 "Content-Type": "application/json"
             },
             json=payload,
-            timeout=25
+            timeout=REQUEST_TIMEOUT
         )
 
         try:
@@ -216,11 +207,13 @@ def chat():
                 "message",
                 "Gemini request failed."
             )
+
             return jsonify(
                 error=f"Gemini API error ({response.status_code}): {message}"
             ), 502
 
         candidates = data.get("candidates", [])
+
         parts = (
             candidates[0].get("content", {}).get("parts", [])
             if candidates else []
@@ -244,6 +237,7 @@ def chat():
         return jsonify(
             error="The AI took too long to respond. Please try again."
         ), 504
+
     except requests.RequestException:
         return jsonify(
             error="Could not connect to Gemini. Please try again."
