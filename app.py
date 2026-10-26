@@ -1,9 +1,7 @@
-
 import os
 import io
 import base64
 import requests
-
 from PIL import Image, ImageOps
 from pillow_heif import register_heif_opener
 from flask import Flask, jsonify, request, send_from_directory
@@ -14,45 +12,41 @@ app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024
 
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
-MAX_IMAGE_DIMENSION = 1280
-MAX_HISTORY_MESSAGES = 8
-MAX_MESSAGE_LENGTH = 4000
-
-MODEL = "gemini-3.5-flash-lite"
+MAX_IMAGE_DIMENSION = 1600
 
 SYSTEM_PROMPT = """
 You are TENX AI, an educational AI assistant for students.
 
 ACCURACY:
-- Give accurate, relevant and clear answers.
-- Never invent facts. Admit uncertainty when necessary.
-- Answer simple questions directly and quickly.
-- Explain difficult questions step by step.
-- Write correct, runnable code when requested.
-- Analyze attached images and school questions carefully.
-- If an image is unclear, explain what cannot be read.
+- Give accurate, relevant, clear answers.
+- Never invent facts. State uncertainty honestly.
+- Explain step by step when useful.
+- Answer simple questions directly.
+- Explain code and use correct examples.
+- When an image is attached, analyze its contents carefully.
+- Read school questions from images and explain the solution.
+- If text is blurry or unreadable, say so honestly.
 
 LANGUAGE:
 - Reply in the same language as the user.
 - Use natural, clear Arabic when the user writes Arabic.
-- Preserve correct English technical terms.
-- Never reverse or alter letters, numbers or code.
+- Keep English technical terms correctly spelled.
+- Never reverse letters, numbers, words, or code.
 
 FORMATTING:
-- Use short paragraphs and numbered steps when useful.
+- Use plain text by default.
+- Use short paragraphs and numbered steps when helpful.
 - Put programming code in fenced code blocks.
-- Avoid unnecessary introductions and repetition.
+- Keep math and technical terms readable.
 
 PERSONALITY:
-- Be respectful, encouraging and professional.
-- Help students understand, not just copy answers.
+- Be respectful, encouraging, and professional.
+- Teach students clearly without unnecessary detail.
 
 CREATOR:
 - If asked who created TENX AI, say Mohamed Gomaa (Oza).
-- Do not claim the creator developed Gemini itself.
+- Do not claim its creator developed Gemini itself.
 """
-
-session = requests.Session()
 
 
 @app.get("/")
@@ -83,7 +77,7 @@ def prepare_image(image_data):
             raise ValueError("The image is empty.")
 
         if len(raw) > MAX_IMAGE_BYTES:
-            raise ValueError("The image must be under 5 MB.")
+            raise ValueError("The original image must be under 5 MB.")
 
         with Image.open(io.BytesIO(raw)) as source:
             image = ImageOps.exif_transpose(source)
@@ -107,7 +101,7 @@ def prepare_image(image_data):
             image.save(
                 output,
                 format="JPEG",
-                quality=80,
+                quality=85,
                 optimize=True
             )
 
@@ -119,7 +113,7 @@ def prepare_image(image_data):
         raise
     except Exception as exc:
         raise ValueError(
-            "Could not read this image. Please try another image."
+            "The image could not be opened. Try another image."
         ) from exc
 
 
@@ -132,11 +126,7 @@ def chat():
             error="GEMINI_API_KEY is missing from Vercel settings."
         ), 503
 
-    body = request.get_json(silent=True)
-
-    if not isinstance(body, dict):
-        return jsonify(error="Invalid request data."), 400
-
+    body = request.get_json(silent=True) or {}
     messages = body.get("messages", [])
 
     if not isinstance(messages, list) or not messages:
@@ -144,7 +134,7 @@ def chat():
 
     contents = []
 
-    for item in messages[-MAX_HISTORY_MESSAGES:]:
+    for item in messages[-16:]:
         if not isinstance(item, dict):
             continue
 
@@ -153,12 +143,10 @@ def chat():
 
         if role not in ("user", "assistant"):
             continue
-
         if not isinstance(content, str):
             continue
 
-        content = content.strip()[:MAX_MESSAGE_LENGTH]
-
+        content = content.strip()[:6000]
         if content:
             contents.append({
                 "role": "user" if role == "user" else "model",
@@ -166,9 +154,7 @@ def chat():
             })
 
     if not contents or contents[-1]["role"] != "user":
-        return jsonify(
-            error="Please send a new message."
-        ), 400
+        return jsonify(error="Please send a new message."), 400
 
     image = body.get("image")
 
@@ -177,25 +163,25 @@ def chat():
             return jsonify(error="Invalid image data."), 400
 
         image_data = image.get("data", "")
-
         if not isinstance(image_data, str) or not image_data:
             return jsonify(error="No image data received."), 400
 
         try:
-            converted_image = prepare_image(image_data)
+            converted = prepare_image(image_data)
         except ValueError as exc:
             return jsonify(error=str(exc)), 400
 
         contents[-1]["parts"].append({
             "inline_data": {
                 "mime_type": "image/jpeg",
-                "data": converted_image
+                "data": converted
             }
         })
 
+    model = model = "gemini-3.5-flash-lite"
     url = (
         "https://generativelanguage.googleapis.com/"
-        f"v1beta/models/{MODEL}:generateContent"
+        f"v1beta/models/{model}:generateContent"
     )
 
     payload = {
@@ -204,22 +190,20 @@ def chat():
         },
         "contents": contents,
         "generationConfig": {
-            "maxOutputTokens": 1200,
-            "thinkingConfig": {
-                "thinkingLevel": "minimal"
-            }
+            "temperature": 0.7,
+            "maxOutputTokens": 1500
         }
     }
 
     try:
-        response = session.post(
+        response = requests.post(
             url,
             headers={
                 "x-goog-api-key": api_key,
                 "Content-Type": "application/json"
             },
             json=payload,
-            timeout=(5, 25)
+            timeout=25
         )
 
         try:
@@ -228,27 +212,18 @@ def chat():
             data = {}
 
         if not response.ok:
-            error_data = data.get("error", {})
-            message = error_data.get(
+            message = data.get("error", {}).get(
                 "message",
                 "Gemini request failed."
             )
-
             return jsonify(
                 error=f"Gemini API error ({response.status_code}): {message}"
             ), 502
 
         candidates = data.get("candidates", [])
-
-        if not candidates:
-            return jsonify(
-                error="Gemini returned no answer. Please try again."
-            ), 502
-
         parts = (
-            candidates[0]
-            .get("content", {})
-            .get("parts", [])
+            candidates[0].get("content", {}).get("parts", [])
+            if candidates else []
         )
 
         answer = "".join(
@@ -267,12 +242,9 @@ def chat():
 
     except requests.Timeout:
         return jsonify(
-            error="Gemini took too long to respond. Please try again."
+            error="The AI took too long to respond. Please try again."
         ), 504
-
     except requests.RequestException:
-        app.logger.exception("Connection to Gemini failed")
-
         return jsonify(
             error="Could not connect to Gemini. Please try again."
         ), 502
