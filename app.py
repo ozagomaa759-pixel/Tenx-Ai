@@ -1,219 +1,254 @@
-
 import os
-import json
-import logging
+import io
+import base64
 import requests
+from PIL import Image, ImageOps
+from pillow_heif import register_heif_opener
+from flask import Flask, jsonify, request, send_from_directory
 
-from flask import Flask, request, Response, jsonify, send_from_directory
+register_heif_opener()
 
-app = Flask(__name__, static_folder=None)
-logging.basicConfig(level=logging.INFO)
+app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
-MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
-
-MAX_HISTORY = 8
-MAX_MESSAGE_LENGTH = 4000
+MAX_IMAGE_BYTES = 5 * 1024 * 1024
+MAX_IMAGE_DIMENSION = 1600
 
 SYSTEM_PROMPT = """
-You are TENX AI, a helpful educational AI assistant for students.
-Reply in the same language as the user's latest message.
-When the user writes Arabic, reply in clear natural Arabic.
-When the user writes Egyptian Arabic, friendly Egyptian Arabic is welcome.
-Explain programming, science, mathematics, and technology clearly.
-When an image is provided, analyze its visible content.
-Be accurate, concise for simple questions, and honest about uncertainty.
+You are TENX AI, an educational AI assistant for students.
+
+ACCURACY:
+- Give accurate, relevant, clear answers.
+- Never invent facts. State uncertainty honestly.
+- Explain step by step when useful.
+- Answer simple questions directly.
+- Explain code and use correct examples.
+- When an image is attached, analyze its contents carefully.
+- Read school questions from images and explain the solution.
+- If text is blurry or unreadable, say so honestly.
+
+LANGUAGE:
+- Reply in the same language as the user.
+- Use natural, clear Arabic when the user writes Arabic.
+- Keep English technical terms correctly spelled.
+- Never reverse letters, numbers, words, or code.
+
+FORMATTING:
+- Use plain text by default.
+- Use short paragraphs and numbered steps when helpful.
+- Put programming code in fenced code blocks.
+- Keep math and technical terms readable.
+
+PERSONALITY:
+- Be respectful, encouraging, and professional.
+- Teach students clearly without unnecessary detail.
+
+CREATOR:
+- If asked who created TENX AI, say Mohamed Gomaa (Oza).
+- Do not claim its creator developed Gemini itself.
 """
 
-session = requests.Session()
 
-
-@app.route("/", methods=["GET"])
+@app.get("/")
 def home():
-    return send_from_directory(BASE_DIR, "Index.html")
+    return send_from_directory(".", "index.html")
 
 
-@app.route("/api/health", methods=["GET"])
+@app.get("/api/health")
 def health():
-    return jsonify({
-        "status": "ok",
-        "model": MODEL,
-        "api_key_configured": bool(API_KEY)
-    })
+    return jsonify(
+        ok=True,
+        configured=bool(os.getenv("GEMINI_API_KEY"))
+    )
 
 
-def build_contents(messages, image=None):
-    contents = []
-
-    for message in messages[-MAX_HISTORY:]:
-        if not isinstance(message, dict):
-            continue
-
-        role = message.get("role", "user")
-        text = message.get("content", message.get("text", ""))
-
-        if role not in ("user", "assistant") or not isinstance(text, str):
-            continue
-
-        contents.append({
-            "role": "model" if role == "assistant" else "user",
-            "parts": [{"text": text[:MAX_MESSAGE_LENGTH]}]
-        })
-
-    if image and isinstance(image, dict):
-        mime_type = image.get("mimeType", "")
-        image_data = image.get("data", "")
-
-        allowed_types = {
-            "image/jpeg", "image/png", "image/webp",
-            "image/heic", "image/heif"
-        }
-
-        if (
-            mime_type in allowed_types
-            and isinstance(image_data, str)
-            and image_data
-            and len(image_data) <= 12_000_000
-        ):
-            if not contents or contents[-1]["role"] != "user":
-                contents.append({"role": "user", "parts": []})
-
-            contents[-1]["parts"].append({
-                "inline_data": {
-                    "mime_type": mime_type,
-                    "data": image_data
-                }
-            })
-
-    return contents
+@app.errorhandler(413)
+def request_too_large(error):
+    return jsonify(
+        error="The request is too large. Please choose a smaller image."
+    ), 413
 
 
-@app.route("/api/chat", methods=["POST"])
+def prepare_image(image_data):
+    try:
+        raw = base64.b64decode(image_data, validate=True)
+
+        if not raw:
+            raise ValueError("The image is empty.")
+
+        if len(raw) > MAX_IMAGE_BYTES:
+            raise ValueError("The original image must be under 5 MB.")
+
+        with Image.open(io.BytesIO(raw)) as source:
+            image = ImageOps.exif_transpose(source)
+            image.load()
+            image.thumbnail(
+                (MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION)
+            )
+
+            if image.mode in ("RGBA", "LA"):
+                rgba = image.convert("RGBA")
+                background = Image.new("RGB", rgba.size, "white")
+                background.paste(
+                    rgba,
+                    mask=rgba.getchannel("A")
+                )
+                image = background
+            else:
+                image = image.convert("RGB")
+
+            output = io.BytesIO()
+            image.save(
+                output,
+                format="JPEG",
+                quality=85,
+                optimize=True
+            )
+
+            return base64.b64encode(
+                output.getvalue()
+            ).decode("ascii")
+
+    except ValueError:
+        raise
+    except Exception as exc:
+        raise ValueError(
+            "The image could not be opened. Try another image."
+        ) from exc
+
+
+@app.post("/api/chat")
 def chat():
-    if not API_KEY:
-        return jsonify({
-            "error": "GEMINI_API_KEY is missing from Vercel Environment Variables."
-        }), 500
+    api_key = os.getenv("GEMINI_API_KEY", "").strip()
 
-    data = request.get_json(silent=True) or {}
-    messages = data.get("messages", [])
-    image = data.get("image")
+    if not api_key:
+        return jsonify(
+            error="GEMINI_API_KEY is missing from Vercel settings."
+        ), 503
+
+    body = request.get_json(silent=True) or {}
+    messages = body.get("messages", [])
 
     if not isinstance(messages, list) or not messages:
-        return jsonify({"error": "Please send a message."}), 400
+        return jsonify(error="Write a message first."), 400
 
-    contents = build_contents(messages, image)
+    contents = []
 
-    if not contents:
-        return jsonify({"error": "No valid message was provided."}), 400
+    for item in messages[-16:]:
+        if not isinstance(item, dict):
+            continue
+
+        role = item.get("role")
+        content = item.get("content")
+
+        if role not in ("user", "assistant"):
+            continue
+        if not isinstance(content, str):
+            continue
+
+        content = content.strip()[:6000]
+        if content:
+            contents.append({
+                "role": "user" if role == "user" else "model",
+                "parts": [{"text": content}]
+            })
+
+    if not contents or contents[-1]["role"] != "user":
+        return jsonify(error="Please send a new message."), 400
+
+    image = body.get("image")
+
+    if image is not None:
+        if not isinstance(image, dict):
+            return jsonify(error="Invalid image data."), 400
+
+        image_data = image.get("data", "")
+        if not isinstance(image_data, str) or not image_data:
+            return jsonify(error="No image data received."), 400
+
+        try:
+            converted = prepare_image(image_data)
+        except ValueError as exc:
+            return jsonify(error=str(exc)), 400
+
+        contents[-1]["parts"].append({
+            "inline_data": {
+                "mime_type": "image/jpeg",
+                "data": converted
+            }
+        })
+
+    model = model = "gemini-3.5-flash-lite"
+    url = (
+        "https://generativelanguage.googleapis.com/"
+        f"v1beta/models/{model}:generateContent"
+    )
 
     payload = {
-        "system_instruction": {
+        "systemInstruction": {
             "parts": [{"text": SYSTEM_PROMPT}]
         },
         "contents": contents,
         "generationConfig": {
-            "temperature": 0.5,
-            "maxOutputTokens": 1024
+            "temperature": 0.7,
+            "maxOutputTokens": 1500
         }
     }
 
-    url = (
-        "https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{MODEL}:streamGenerateContent?alt=sse&key={API_KEY}"
-    )
-
-    def generate():
-        upstream = None
+    try:
+        response = requests.post(
+            url,
+            headers={
+                "x-goog-api-key": api_key,
+                "Content-Type": "application/json"
+            },
+            json=payload,
+            timeout=25
+        )
 
         try:
-            upstream = session.post(
-                url,
-                json=payload,
-                headers={
-                    "Content-Type": "application/json; charset=utf-8",
-                    "Accept": "text/event-stream"
-                },
-                stream=True,
-                timeout=(10, 60)
+            data = response.json()
+        except ValueError:
+            data = {}
+
+        if not response.ok:
+            message = data.get("error", {}).get(
+                "message",
+                "Gemini request failed."
             )
+            return jsonify(
+                error=f"Gemini API error ({response.status_code}): {message}"
+            ), 502
 
-            if upstream.status_code != 200:
-                details = upstream.text[:2000]
-                logging.error(
-                    "Gemini HTTP %s: %s",
-                    upstream.status_code,
-                    details
-                )
-                yield "[TENX_ERROR]" + json.dumps({
-                    "error": f"Gemini returned HTTP {upstream.status_code}.",
-                    "details": details
-                }, ensure_ascii=False)
-                return
+        candidates = data.get("candidates", [])
+        parts = (
+            candidates[0].get("content", {}).get("parts", [])
+            if candidates else []
+        )
 
-            for line in upstream.iter_lines(decode_unicode=False):
-                if not line:
-                    continue
+        answer = "".join(
+            part.get("text", "")
+            for part in parts
+            if isinstance(part, dict)
+            and isinstance(part.get("text"), str)
+        ).strip()
 
-                if isinstance(line, bytes):
-                    line = line.decode("utf-8", errors="replace")
+        if not answer:
+            return jsonify(
+                error="Gemini returned an empty response. Please try again."
+            ), 502
 
-                line = line.strip()
-                if not line.startswith("data:"):
-                    continue
+        return jsonify(reply=answer)
 
-                raw = line[5:].strip()
-                if not raw or raw == "[DONE]":
-                    continue
-
-                try:
-                    chunk = json.loads(raw)
-                except json.JSONDecodeError:
-                    logging.warning("Invalid JSON chunk from Gemini.")
-                    continue
-
-                for candidate in chunk.get("candidates", []):
-                    content = candidate.get("content", {})
-                    for part in content.get("parts", []):
-                        text = part.get("text", "")
-                        if text:
-                            yield text
-
-        except requests.Timeout:
-            logging.exception("Gemini request timed out.")
-            yield "[TENX_ERROR]" + json.dumps({
-                "error": "The AI service took too long to respond."
-            }, ensure_ascii=False)
-
-        except requests.RequestException:
-            logging.exception("Network error contacting Gemini.")
-            yield "[TENX_ERROR]" + json.dumps({
-                "error": "Could not connect to the AI service."
-            }, ensure_ascii=False)
-
-        except Exception:
-            logging.exception("Unexpected error in streaming response.")
-            yield "[TENX_ERROR]" + json.dumps({
-                "error": "An unexpected server error occurred."
-            }, ensure_ascii=False)
-
-        finally:
-            if upstream is not None:
-                upstream.close()
-
-    return Response(
-        generate(),
-        content_type="text/plain; charset=utf-8",
-        headers={
-            "Cache-Control": "no-cache, no-transform",
-            "X-Accel-Buffering": "no"
-        }
-    )
+    except requests.Timeout:
+        return jsonify(
+            error="The AI took too long to respond. Please try again."
+        ), 504
+    except requests.RequestException:
+        return jsonify(
+            error="Could not connect to Gemini. Please try again."
+        ), 502
 
 
 if __name__ == "__main__":
-    app.run(
-        host="0.0.0.0",
-        port=int(os.environ.get("PORT", "5000"))
-    )
+    app.run(host="0.0.0.0", port=5000)
