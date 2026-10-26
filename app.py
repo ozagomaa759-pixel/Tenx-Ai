@@ -1,6 +1,7 @@
 
 import os
 import io
+import time
 import base64
 import requests
 from PIL import Image, ImageOps
@@ -13,23 +14,22 @@ app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024
 
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
-MAX_IMAGE_DIMENSION = 1600
+MAX_IMAGE_DIMENSION = 1280
 REQUEST_TIMEOUT = (5, 30)
 
-SYSTEM_PROMPT = """
-You are TENX AI, a fast and accurate educational AI assistant.
+MODEL = "gemini-3.5-flash-lite"
 
-- Answer directly and concisely. Avoid unnecessary introductions.
-- For simple questions, give the answer immediately.
-- For complex questions, explain the essential steps clearly.
-- Accuracy is more important than speed. Never invent facts.
+SYSTEM_PROMPT = """
+You are TENX AI, a fast and accurate educational assistant.
+
+- Answer simple questions immediately and concisely.
+- Explain complex problems clearly, using essential steps.
+- Accuracy matters more than speed. Never invent facts.
 - If uncertain, say so briefly.
-- Reply in the same language as the user.
-- Use natural, clear Arabic when the user writes Arabic.
-- Preserve the correct order of letters, numbers, words, and code.
-- Analyze attached images carefully and solve readable school questions.
-- If text is blurry or unreadable, say so honestly.
-- Format programming code using fenced code blocks.
+- Reply in the user's language, using natural Arabic for Arabic messages.
+- Preserve the order of letters, numbers, words, and code.
+- Explain programming clearly and format code in fenced blocks.
+- Analyze attached images carefully. If text is unreadable, say so.
 - Be respectful, encouraging, and professional.
 - If asked who created TENX AI, say Mohamed Gomaa (Oza).
 - Do not claim its creator developed Gemini itself.
@@ -45,14 +45,15 @@ def home():
 def health():
     return jsonify(
         ok=True,
-        configured=bool(os.getenv("GEMINI_API_KEY"))
+        configured=bool(os.getenv("GEMINI_API_KEY")),
+        model=MODEL
     )
 
 
 @app.errorhandler(413)
 def request_too_large(error):
     return jsonify(
-        error="The request is too large. Please choose a smaller image."
+        error="Request too large. Please choose a smaller image."
     ), 413
 
 
@@ -69,49 +70,35 @@ def prepare_image(image_data):
         with Image.open(io.BytesIO(raw)) as source:
             image = ImageOps.exif_transpose(source)
             image.load()
-            image.thumbnail(
-                (MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION)
-            )
+            image.thumbnail((MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION))
 
             if image.mode in ("RGBA", "LA"):
                 rgba = image.convert("RGBA")
                 background = Image.new("RGB", rgba.size, "white")
-                background.paste(
-                    rgba,
-                    mask=rgba.getchannel("A")
-                )
+                background.paste(rgba, mask=rgba.getchannel("A"))
                 image = background
             else:
                 image = image.convert("RGB")
 
             output = io.BytesIO()
-            image.save(
-                output,
-                format="JPEG",
-                quality=85,
-                optimize=True
-            )
-
-            return base64.b64encode(
-                output.getvalue()
-            ).decode("ascii")
+            image.save(output, format="JPEG", quality=80)
+            return base64.b64encode(output.getvalue()).decode("ascii")
 
     except ValueError:
         raise
     except Exception as exc:
         raise ValueError(
-            "The image could not be opened. Try another image."
+            "Could not read this image. Please try another one."
         ) from exc
 
 
 @app.post("/api/chat")
 def chat():
-    api_key = os.getenv("GEMINI_API_KEY", "").strip()
+    started = time.perf_counter()
 
+    api_key = os.getenv("GEMINI_API_KEY", "").strip()
     if not api_key:
-        return jsonify(
-            error="GEMINI_API_KEY is missing from Vercel settings."
-        ), 503
+        return jsonify(error="GEMINI_API_KEY is missing from Vercel settings."), 503
 
     body = request.get_json(silent=True) or {}
     messages = body.get("messages", [])
@@ -121,21 +108,18 @@ def chat():
 
     contents = []
 
-    for item in messages[-16:]:
+    # Limit history to reduce request size while retaining context.
+    for item in messages[-8:]:
         if not isinstance(item, dict):
             continue
 
         role = item.get("role")
         content = item.get("content")
 
-        if role not in ("user", "assistant"):
+        if role not in ("user", "assistant") or not isinstance(content, str):
             continue
 
-        if not isinstance(content, str):
-            continue
-
-        content = content.strip()[:6000]
-
+        content = content.strip()[:3000]
         if content:
             contents.append({
                 "role": "user" if role == "user" else "model",
@@ -146,13 +130,11 @@ def chat():
         return jsonify(error="Please send a new message."), 400
 
     image = body.get("image")
-
     if image is not None:
         if not isinstance(image, dict):
             return jsonify(error="Invalid image data."), 400
 
         image_data = image.get("data", "")
-
         if not isinstance(image_data, str) or not image_data:
             return jsonify(error="No image data received."), 400
 
@@ -168,11 +150,9 @@ def chat():
             }
         })
 
-    model = "gemini-3.5-flash-lite"
-
     url = (
         "https://generativelanguage.googleapis.com/"
-        f"v1beta/models/{model}:generateContent"
+        f"v1beta/models/{MODEL}:generateContent"
     )
 
     payload = {
@@ -182,11 +162,13 @@ def chat():
         "contents": contents,
         "generationConfig": {
             "temperature": 0.4,
-            "maxOutputTokens": 1200
+            "maxOutputTokens": 800
         }
     }
 
     try:
+        api_started = time.perf_counter()
+
         response = requests.post(
             url,
             headers={
@@ -197,6 +179,11 @@ def chat():
             timeout=REQUEST_TIMEOUT
         )
 
+        print(
+            f"TENX Gemini HTTP {response.status_code}; "
+            f"API wait {time.perf_counter() - api_started:.2f}s"
+        )
+
         try:
             data = response.json()
         except ValueError:
@@ -204,16 +191,13 @@ def chat():
 
         if not response.ok:
             message = data.get("error", {}).get(
-                "message",
-                "Gemini request failed."
+                "message", "Gemini request failed."
             )
-
             return jsonify(
                 error=f"Gemini API error ({response.status_code}): {message}"
             ), 502
 
         candidates = data.get("candidates", [])
-
         parts = (
             candidates[0].get("content", {}).get("parts", [])
             if candidates else []
@@ -227,17 +211,18 @@ def chat():
         ).strip()
 
         if not answer:
+            print("TENX Gemini returned no text.")
             return jsonify(
                 error="Gemini returned an empty response. Please try again."
             ), 502
 
+        print(f"TENX total time: {time.perf_counter() - started:.2f}s")
         return jsonify(reply=answer)
 
     except requests.Timeout:
         return jsonify(
-            error="The AI took too long to respond. Please try again."
+            error="Gemini took too long to respond. Please try again."
         ), 504
-
     except requests.RequestException:
         return jsonify(
             error="Could not connect to Gemini. Please try again."
