@@ -233,6 +233,7 @@ def chat():
         print(
             f"[TENX] Gemini response received in {elapsed:.2f}s "
             f"(HTTP {response.status_code})",
+            f"Response bytes: {len(response.content)}",
             flush=True
         )
 
