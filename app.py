@@ -2,6 +2,7 @@ import os
 import io
 import base64
 import requests
+import time
 from PIL import Image, ImageOps
 from pillow_heif import register_heif_opener
 from flask import Flask, jsonify, request, send_from_directory
@@ -194,8 +195,10 @@ def chat():
             "maxOutputTokens": 1500
         }
     }
-
     try:
+        start_time = time.perf_counter()
+        print("[TENX] Gemini request started", flush=True)
+
         response = requests.post(
             url,
             headers={
@@ -204,6 +207,13 @@ def chat():
             },
             json=payload,
             timeout=25
+        )
+
+        elapsed = time.perf_counter() - start_time
+        print(
+            f"[TENX] Gemini response received in {elapsed:.2f}s "
+            f"(HTTP {response.status_code})",
+            flush=True
         )
 
         try:
