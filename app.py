@@ -12,47 +12,22 @@ app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024
 
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
-MAX_IMAGE_DIMENSION = 1600
+MAX_IMAGE_DIMENSION = 1200  # تقليل الأبعاد قليلاً لتسريع معالجة الصور
+
+# إنشاء Session ثابتة لتسريع الاتصالات المتكررة بـ API
+api_session = requests.Session()
 
 SYSTEM_PROMPT = """
 You are TENX AI, an educational AI assistant for students.
-
-ACCURACY:
-- Give accurate, relevant, clear answers.
-- Never invent facts. State uncertainty honestly.
-- Explain step by step when useful.
-- Answer simple questions directly.
-- Explain code and use correct examples.
-- When an image is attached, analyze its contents carefully.
-- Read school questions from images and explain the solution.
-- If text is blurry or unreadable, say so honestly.
-
-LANGUAGE:
-- Reply in the same language as the user.
-- Use natural, clear Arabic when the user writes Arabic.
-- Keep English technical terms correctly spelled.
-- Never reverse letters, numbers, words, or code.
-
-FORMATTING:
-- Use plain text by default.
-- Use short paragraphs and numbered steps when helpful.
-- Put programming code in fenced code blocks.
-- Keep math and technical terms readable.
-
-PERSONALITY:
-- Be respectful, encouraging, and professional.
-- Teach students clearly without unnecessary detail.
-
-CREATOR:
-- If asked who created TENX AI, say Mohamed Gomaa (Oza).
-- Do not claim its creator developed Gemini itself.
+ACCURACY: Give accurate, direct answers. Explain code clearly.
+LANGUAGE: Reply in the same language as the user. Use natural Arabic for Arabic text. Never reverse letters or code.
+FORMATTING: Short paragraphs, plain text, fenced code blocks for code.
+CREATOR: If asked who created TENX AI, say Mohamed Gomaa (Oza).
 """
-
 
 @app.get("/")
 def home():
     return send_from_directory(".", "index.html")
-
 
 @app.get("/api/health")
 def health():
@@ -61,92 +36,57 @@ def health():
         configured=bool(os.getenv("GEMINI_API_KEY"))
     )
 
-
 @app.errorhandler(413)
 def request_too_large(error):
-    return jsonify(
-        error="The request is too large. Please choose a smaller image."
-    ), 413
-
+    return jsonify(error="الصورة كبيرة جداً، اختر صورة أقل من 5 ميجابايت."), 413
 
 def prepare_image(image_data):
     try:
         raw = base64.b64decode(image_data, validate=True)
-
-        if not raw:
-            raise ValueError("The image is empty.")
-
-        if len(raw) > MAX_IMAGE_BYTES:
-            raise ValueError("The original image must be under 5 MB.")
+        if not raw or len(raw) > MAX_IMAGE_BYTES:
+            raise ValueError("حجم الصورة غير مسموح به.")
 
         with Image.open(io.BytesIO(raw)) as source:
             image = ImageOps.exif_transpose(source)
             image.load()
-            image.thumbnail(
-                (MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION)
-            )
+            image.thumbnail((MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION))
 
             if image.mode in ("RGBA", "LA"):
                 rgba = image.convert("RGBA")
                 background = Image.new("RGB", rgba.size, "white")
-                background.paste(
-                    rgba,
-                    mask=rgba.getchannel("A")
-                )
+                background.paste(rgba, mask=rgba.getchannel("A"))
                 image = background
             else:
                 image = image.convert("RGB")
 
             output = io.BytesIO()
-            image.save(
-                output,
-                format="JPEG",
-                quality=85,
-                optimize=True
-            )
-
-            return base64.b64encode(
-                output.getvalue()
-            ).decode("ascii")
-
-    except ValueError:
-        raise
+            image.save(output, format="JPEG", quality=80, optimize=True) # تقليل الجودة لـ 80 لتسريع الرفع والتحليل
+            return base64.b64encode(output.getvalue()).decode("ascii")
     except Exception as exc:
-        raise ValueError(
-            "The image could not be opened. Try another image."
-        ) from exc
-
+        raise ValueError("فشل معالجة الصورة.") from exc
 
 @app.post("/api/chat")
 def chat():
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
-
     if not api_key:
-        return jsonify(
-            error="GEMINI_API_KEY is missing from Vercel settings."
-        ), 503
+        return jsonify(error="مفتاح API غير موجود في الإعدادات."), 503
 
     body = request.get_json(silent=True) or {}
     messages = body.get("messages", [])
 
     if not isinstance(messages, list) or not messages:
-        return jsonify(error="Write a message first."), 400
+        return jsonify(error="اكتب رسالة أولاً."), 400
 
     contents = []
-
-    for item in messages[-16:]:
+    # تقليص الذاكرة المؤقتة لآخر 8 رسائل فقط لتقليل الضغط وسرعة الرد
+    for item in messages[-8:]:
         if not isinstance(item, dict):
             continue
-
         role = item.get("role")
         content = item.get("content")
-
-        if role not in ("user", "assistant"):
+        if role not in ("user", "assistant") or not isinstance(content, str):
             continue
-        if not isinstance(content, str):
-            continue
-
-        content = content.strip()[:6000]
+        content = content.strip()[:3000]
         if content:
             contents.append({
                 "role": "user" if role == "user" else "model",
@@ -154,101 +94,62 @@ def chat():
             })
 
     if not contents or contents[-1]["role"] != "user":
-        return jsonify(error="Please send a new message."), 400
+        return jsonify(error="أرسل رسالة صحيحة."), 400
 
     image = body.get("image")
-
-    if image is not None:
-        if not isinstance(image, dict):
-            return jsonify(error="Invalid image data."), 400
-
+    if image is not None and isinstance(image, dict):
         image_data = image.get("data", "")
-        if not isinstance(image_data, str) or not image_data:
-            return jsonify(error="No image data received."), 400
+        if image_data:
+            try:
+                converted = prepare_image(image_data)
+                contents[-1]["parts"].append({
+                    "inline_data": {
+                        "mime_type": "image/jpeg",
+                        "data": converted
+                    }
+                })
+            except ValueError as exc:
+                return jsonify(error=str(exc)), 400
 
-        try:
-            converted = prepare_image(image_data)
-        except ValueError as exc:
-            return jsonify(error=str(exc)), 400
-
-        contents[-1]["parts"].append({
-            "inline_data": {
-                "mime_type": "image/jpeg",
-                "data": converted
-            }
-        })
-
-    model = model = "gemini-3.5-flash-lite"
-    url = (
-        "https://generativelanguage.googleapis.com/"
-        f"v1beta/models/{model}:generateContent"
-    )
+    model = "gemini-3.5-flash-lite"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
     payload = {
-        "systemInstruction": {
-            "parts": [{"text": SYSTEM_PROMPT}]
-        },
+        "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
         "contents": contents,
         "generationConfig": {
-            "temperature": 0.7,
-            "maxOutputTokens": 1500
+            "temperature": 0.6,
+            "maxOutputTokens": 800  # تقليص الحد الأقصى للتوكنز لتوليد الرد بسرعة صاروخية
         }
     }
 
     try:
-        response = requests.post(
+        # استخدام api_session لتسريع الاتصال عبر تكرار فتح الـ sockets
+        response = api_session.post(
             url,
-            headers={
-                "x-goog-api-key": api_key,
-                "Content-Type": "application/json"
-            },
+            headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
             json=payload,
-            timeout=25
+            timeout=15
         )
 
-        try:
-            data = response.json()
-        except ValueError:
-            data = {}
-
+        data = response.json() if response.ok else {}
         if not response.ok:
-            message = data.get("error", {}).get(
-                "message",
-                "Gemini request failed."
-            )
-            return jsonify(
-                error=f"Gemini API error ({response.status_code}): {message}"
-            ), 502
+            msg = data.get("error", {}).get("message", "حدث خطأ في الاتصال.")
+            return jsonify(error=msg), 502
 
         candidates = data.get("candidates", [])
-        parts = (
-            candidates[0].get("content", {}).get("parts", [])
-            if candidates else []
-        )
-
-        answer = "".join(
-            part.get("text", "")
-            for part in parts
-            if isinstance(part, dict)
-            and isinstance(part.get("text"), str)
-        ).strip()
+        parts = candidates[0].get("content", {}).get("parts", []) if candidates else []
+        answer = "".join(p.get("text", "") for p in parts if isinstance(p, dict)).strip()
 
         if not answer:
-            return jsonify(
-                error="Gemini returned an empty response. Please try again."
-            ), 502
+            return jsonify(error="الذكاء الاصطناعي لم يعيد أي رد، حاول مرة أخرى."), 502
 
         return jsonify(reply=answer)
 
     except requests.Timeout:
-        return jsonify(
-            error="The AI took too long to respond. Please try again."
-        ), 504
+        return jsonify(error="استغرق الرد وقتاً طويلاً، حاول مرة أخرى."), 504
     except requests.RequestException:
-        return jsonify(
-            error="Could not connect to Gemini. Please try again."
-        ), 502
-
+        return jsonify(error="فشل الاتصال بخدمة الذكاء الاصطناعي."), 502
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
