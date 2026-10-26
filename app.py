@@ -1,21 +1,14 @@
+
 import os
 import io
 import json
 import base64
-import time
 import logging
 
 import requests
 from PIL import Image, ImageOps
 from pillow_heif import register_heif_opener
-from flask import (
-    Flask,
-    jsonify,
-    request,
-    send_from_directory,
-    Response,
-    stream_with_context,
-)
+from flask import Flask, jsonify, request, send_from_directory
 
 register_heif_opener()
 
@@ -24,83 +17,26 @@ app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024
 
 logging.basicConfig(level=logging.INFO)
 
+MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite").strip()
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
 MAX_IMAGE_DIMENSION = 1600
 MAX_MESSAGES = 8
 MAX_MESSAGE_LENGTH = 6000
 
-MODEL = os.getenv(
-    "GEMINI_MODEL",
-    "gemini-3.5-flash-lite",
-).strip()
-
 SYSTEM_PROMPT = """
-You are TENX AI, an intelligent, reliable, student-focused
-educational assistant.
-
-CORE PURPOSE:
-Help students understand concepts, solve academic problems,
-learn programming, analyze educational images, and develop
-their problem-solving skills.
-
-ANSWER QUALITY:
-- Answer the user's actual question directly.
-- Explain difficult concepts step by step.
-- Give practical examples when useful.
-- Keep simple answers concise.
-- Never invent facts, sources, or capabilities.
-- Explain uncertainty honestly.
-- Ask clarifying questions only when necessary.
-
-EDUCATIONAL SUPPORT:
-- Explain why an answer is correct.
-- Show essential calculation steps for mathematics.
-- Provide valid code when programming help is requested.
-- Explain important code parts clearly.
-- For debugging, identify the cause and suggest a concrete fix.
-- Help beginners without overwhelming them.
-
-IMAGE UNDERSTANDING:
-- Inspect attached images carefully.
-- Read visible text when possible.
-- Explain questions shown in educational images.
-- Never invent unreadable text or unsupported visual details.
-- If the image is unclear, explain what needs to be uploaded again.
-
-LANGUAGE:
-- Reply in the same language as the user's latest message.
-- When the user writes Arabic, use natural, clear Arabic.
-- Preserve English technical terms and programming syntax.
-- Never translate programming keywords.
-
-RESPONSE STYLE:
-- Be friendly, respectful, and professional.
-- Use short paragraphs and numbered steps when helpful.
-- Use headings only when useful.
-- Put code inside fenced code blocks.
-- Match the answer length to the question.
-
-HONESTY AND SAFETY:
-- Do not claim actions you have not performed.
-- Do not pretend to access live information without a source.
-- Correct mistakes when identified.
-- Distinguish facts from assumptions.
-
-CREATOR:
+You are TENX AI, a reliable educational assistant.
+Help students understand school subjects, mathematics,
+programming, artificial intelligence, and educational images.
+Explain difficult topics step by step and keep simple answers concise.
+Never invent facts or claim capabilities you do not have.
+Reply in the same language as the user's latest message.
+Use clear, friendly language suitable for students.
 If asked who created TENX AI, say Mohamed Gomaa (Oza).
-Do not claim that the creator developed Gemini itself.
+Do not claim the creator developed Gemini itself.
 """
 
 
-def stream_event(event_type, **data):
-    """Encode one NDJSON event."""
-    return json.dumps(
-        {"type": event_type, **data},
-        ensure_ascii=False,
-    ) + "\n"
-
-
-def json_error(message, status):
+def error(message, status=400):
     return jsonify(error=message), status
 
 
@@ -111,97 +47,49 @@ def home():
 
 @app.get("/api/health")
 def health():
-    api_key = os.getenv("GEMINI_API_KEY", "").strip()
-
     return jsonify(
         ok=True,
-        configured=bool(api_key),
+        configured=bool(os.getenv("GEMINI_API_KEY", "").strip()),
         model=MODEL,
     )
 
 
 @app.errorhandler(413)
-def request_too_large(error):
-    return json_error(
-        "The request is too large. Please choose a smaller image.",
-        413,
-    )
+def too_large(exc):
+    return error("The request is too large. Choose a smaller image.", 413)
 
 
-def prepare_image(image_data):
+def prepare_image(data):
     try:
-        raw = base64.b64decode(image_data, validate=True)
+        raw = base64.b64decode(data, validate=True)
 
-        if not raw:
-            raise ValueError("The image is empty.")
-
-        if len(raw) > MAX_IMAGE_BYTES:
-            raise ValueError(
-                "The original image must be under 5 MB."
-            )
+        if not raw or len(raw) > MAX_IMAGE_BYTES:
+            raise ValueError("The image must be under 5 MB.")
 
         with Image.open(io.BytesIO(raw)) as source:
             image = ImageOps.exif_transpose(source)
             image.load()
-            image.thumbnail(
-                (MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION)
-            )
+            image.thumbnail((MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION))
 
             if image.mode in ("RGBA", "LA"):
                 rgba = image.convert("RGBA")
-                background = Image.new(
-                    "RGB",
-                    rgba.size,
-                    "white",
-                )
-                background.paste(
-                    rgba,
-                    mask=rgba.getchannel("A"),
-                )
+                background = Image.new("RGB", rgba.size, "white")
+                background.paste(rgba, mask=rgba.getchannel("A"))
                 image = background
             else:
                 image = image.convert("RGB")
 
             output = io.BytesIO()
-            image.save(
-                output,
-                format="JPEG",
-                quality=85,
-                optimize=True,
-            )
+            image.save(output, format="JPEG", quality=85, optimize=True)
 
-            return base64.b64encode(
-                output.getvalue()
-            ).decode("ascii")
+            return base64.b64encode(output.getvalue()).decode("ascii")
 
     except ValueError:
         raise
     except Exception as exc:
         raise ValueError(
-            "The image could not be opened. "
-            "Try uploading another image."
+            "Could not open that image. Try another image."
         ) from exc
-
-
-def extract_api_error(response):
-    """Extract a useful error message without exposing secrets."""
-    try:
-        data = response.json()
-        error = data.get("error", {})
-
-        if isinstance(error, dict):
-            message = error.get("message")
-
-            if isinstance(message, str) and message.strip():
-                return message.strip()
-
-        if isinstance(error, str) and error.strip():
-            return error.strip()
-
-    except (ValueError, requests.RequestException):
-        pass
-
-    return "Gemini returned an HTTP error."
 
 
 def validate_messages(messages):
@@ -215,81 +103,38 @@ def validate_messages(messages):
             continue
 
         role = item.get("role")
-        content = item.get("content")
+        text = item.get("content")
 
-        if role not in ("user", "assistant"):
+        if role not in ("user", "assistant") or not isinstance(text, str):
             continue
 
-        if not isinstance(content, str):
-            continue
-
-        content = content.strip()[:MAX_MESSAGE_LENGTH]
-
-        if not content:
+        text = text.strip()[:MAX_MESSAGE_LENGTH]
+        if not text:
             continue
 
         contents.append({
             "role": "user" if role == "user" else "model",
-            "parts": [{"text": content}],
+            "parts": [{"text": text}],
         })
 
-    if not contents:
-        raise ValueError("Write a message first.")
-
-    if contents[-1]["role"] != "user":
+    if not contents or contents[-1]["role"] != "user":
         raise ValueError("Please send a new message.")
 
     return contents
 
 
-def extract_chunk_text(chunk):
-    """Extract generated text and useful metadata from a Gemini chunk."""
-    if not isinstance(chunk, dict):
-        return "", None
+def get_error_message(response):
+    try:
+        data = response.json()
+        details = data.get("error", {})
+        if isinstance(details, dict):
+            message = details.get("message")
+            if isinstance(message, str) and message.strip():
+                return message.strip()
+    except (ValueError, requests.RequestException):
+        pass
 
-    prompt_feedback = chunk.get("promptFeedback") or {}
-    block_reason = prompt_feedback.get("blockReason")
-
-    if block_reason:
-        return "", (
-            "Gemini blocked this request. "
-            f"Reason: {block_reason}. "
-            "Try changing your message or image."
-        )
-
-    candidates = chunk.get("candidates") or []
-
-    if not candidates:
-        return "", None
-
-    candidate = candidates[0] or {}
-    finish_reason = candidate.get("finishReason")
-    content = candidate.get("content") or {}
-    parts = content.get("parts") or []
-
-    texts = []
-
-    for part in parts:
-        if not isinstance(part, dict):
-            continue
-
-        text = part.get("text")
-
-        if isinstance(text, str) and text:
-            texts.append(text)
-
-    combined = "".join(texts)
-
-    if combined:
-        return combined, None
-
-    if finish_reason in ("SAFETY", "BLOCKLIST", "PROHIBITED_CONTENT"):
-        return "", (
-            "Gemini could not provide a response because "
-            "the request was blocked by its safety filters."
-        )
-
-    return "", None
+    return "Google returned an API error. Check the Vercel logs."
 
 
 @app.post("/api/chat")
@@ -297,45 +142,34 @@ def chat():
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
 
     if not api_key:
-        return json_error(
-            "GEMINI_API_KEY is missing from Vercel settings.",
-            503,
-        )
+        return error("GEMINI_API_KEY is missing from Vercel settings.", 503)
 
     if not MODEL:
-        return json_error(
-            "GEMINI_MODEL is not configured.",
-            503,
-        )
+        return error("GEMINI_MODEL is not configured.", 503)
 
     body = request.get_json(silent=True)
-
     if not isinstance(body, dict):
-        return json_error(
-            "Invalid request. Please send a valid JSON body.",
-            400,
-        )
+        return error("Invalid JSON request.", 400)
 
     try:
         contents = validate_messages(body.get("messages", []))
     except ValueError as exc:
-        return json_error(str(exc), 400)
+        return error(str(exc), 400)
 
     image = body.get("image")
 
     if image is not None:
         if not isinstance(image, dict):
-            return json_error("Invalid image data.", 400)
+            return error("Invalid image data.", 400)
 
         image_data = image.get("data", "")
-
         if not isinstance(image_data, str) or not image_data:
-            return json_error("No image data received.", 400)
+            return error("No image data received.", 400)
 
         try:
             converted = prepare_image(image_data)
         except ValueError as exc:
-            return json_error(str(exc), 400)
+            return error(str(exc), 400)
 
         contents[-1]["parts"].append({
             "inline_data": {
@@ -345,8 +179,8 @@ def chat():
         })
 
     url = (
-        "https://generativelanguage.googleapis.com/"
-        f"v1beta/models/{MODEL}:streamGenerateContent?alt=sse"
+        "https://generativelanguage.googleapis.com/v1beta/"
+        f"models/{MODEL}:generateContent"
     )
 
     payload = {
@@ -360,176 +194,108 @@ def chat():
         },
     }
 
-    @stream_with_context
-    def generate():
-        started = time.perf_counter()
-        received_text = False
-        response = None
-        api_error = None
+    try:
+        app.logger.info("[TENX] Sending request to Gemini model=%s", MODEL)
+
+        response = requests.post(
+            url,
+            headers={
+                "x-goog-api-key": api_key,
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=(10, 55),
+        )
+
+        if not response.ok:
+            message = get_error_message(response)
+            app.logger.error(
+                "[TENX] Gemini HTTP status=%s message=%s",
+                response.status_code,
+                message,
+            )
+            return error(
+                f"Gemini API error ({response.status_code}): {message}",
+                502,
+            )
 
         try:
-            app.logger.info(
-                "[TENX] Starting Gemini request. Model=%s",
-                MODEL,
+            data = response.json()
+        except ValueError:
+            app.logger.error("[TENX] Gemini returned invalid JSON.")
+            return error("Gemini returned an invalid response.", 502)
+
+        feedback = data.get("promptFeedback") or {}
+        if feedback.get("blockReason"):
+            reason = feedback["blockReason"]
+            app.logger.warning("[TENX] Request blocked: %s", reason)
+            return error(
+                f"Gemini blocked this request ({reason}). Try another prompt.",
+                422,
             )
 
-            response = requests.post(
-                url,
-                headers={
-                    "x-goog-api-key": api_key,
-                    "Content-Type": "application/json",
-                    "Accept": "text/event-stream",
-                },
-                json=payload,
-                stream=True,
-                timeout=(10, 55),
+        candidates = data.get("candidates") or []
+        if not candidates:
+            app.logger.error(
+                "[TENX] No candidates. Response keys=%s",
+                list(data.keys()),
+            )
+            return error(
+                "Gemini returned no answer. Check model access and Vercel logs.",
+                502,
             )
 
-            if not response.ok:
-                message = extract_api_error(response)
+        candidate = candidates[0] or {}
+        content = candidate.get("content") or {}
+        parts = content.get("parts") or []
 
-                app.logger.error(
-                    "[TENX] Gemini HTTP %s: %s",
-                    response.status_code,
-                    message,
-                )
+        answer_parts = [
+            part["text"]
+            for part in parts
+            if isinstance(part, dict)
+            and isinstance(part.get("text"), str)
+            and part["text"].strip()
+            and not part.get("thought", False)
+        ]
 
-                yield stream_event(
-                    "error",
-                    error=(
-                        f"Gemini API error ({response.status_code}): "
-                        f"{message}"
-                    ),
-                )
-                return
+        answer = "".join(answer_parts).strip()
 
-            # Gemini returns SSE records. Convert each text part
-            # into an NDJSON event for the browser.
-            for line in response.iter_lines(
-                decode_unicode=True
-            ):
-                if isinstance(line, bytes):
-                    line = line.decode(
-                        "utf-8",
-                        errors="replace",
-                    )
-
-                if not line:
-                    continue
-
-                line = line.strip()
-
-                if not line.startswith("data:"):
-                    continue
-
-                raw_data = line[5:].strip()
-
-                if not raw_data or raw_data == "[DONE]":
-                    continue
-
-                try:
-                    chunk = json.loads(raw_data)
-                except json.JSONDecodeError:
-                    app.logger.warning(
-                        "[TENX] Ignored malformed Gemini SSE data."
-                    )
-                    continue
-
-                text_part, chunk_error = extract_chunk_text(chunk)
-
-                if chunk_error:
-                    api_error = chunk_error
-
-                if text_part:
-                    received_text = True
-                    yield stream_event(
-                        "chunk",
-                        text=text_part,
-                    )
-
-            elapsed = time.perf_counter() - started
-
-            app.logger.info(
-                "[TENX] Gemini stream finished in %.2f seconds; "
-                "received_text=%s",
-                elapsed,
-                received_text,
+        if not answer:
+            finish_reason = candidate.get("finishReason", "unknown")
+            app.logger.error(
+                "[TENX] Empty answer. finishReason=%s candidateKeys=%s",
+                finish_reason,
+                list(candidate.keys()),
+            )
+            return error(
+                "Gemini returned no visible text "
+                f"(finish reason: {finish_reason}). Try again or check logs.",
+                502,
             )
 
-            if api_error and not received_text:
-                yield stream_event("error", error=api_error)
-                return
+        app.logger.info(
+            "[TENX] Successful response. chars=%d",
+            len(answer),
+        )
 
-            if not received_text:
-                yield stream_event(
-                    "error",
-                    error=(
-                        "Gemini completed the request without returning "
-                        "text. Check the Vercel logs for the Gemini "
-                        "response status and model access."
-                    ),
-                )
-                return
+        return jsonify(reply=answer)
 
-            yield stream_event("done")
+    except requests.Timeout:
+        app.logger.exception("[TENX] Gemini request timed out.")
+        return error("Gemini timed out. Please try again.", 504)
 
-        except requests.Timeout:
-            app.logger.exception("[TENX] Gemini request timed out.")
+    except requests.RequestException:
+        app.logger.exception("[TENX] Gemini connection failed.")
+        return error("Could not connect to Gemini. Check Vercel logs.", 502)
 
-            yield stream_event(
-                "error",
-                error=(
-                    "The AI request timed out. Please try again. "
-                    "If this keeps happening, check the Vercel function "
-                    "duration and Gemini response time."
-                ),
-            )
-
-        except requests.RequestException:
-            app.logger.exception(
-                "[TENX] Could not connect to Gemini."
-            )
-
-            yield stream_event(
-                "error",
-                error=(
-                    "Could not connect to Gemini. "
-                    "Check your network and Vercel logs."
-                ),
-            )
-
-        except Exception:
-            app.logger.exception(
-                "[TENX] Unexpected streaming error."
-            )
-
-            yield stream_event(
-                "error",
-                error=(
-                    "An unexpected server error occurred. "
-                    "Check the Vercel function logs."
-                ),
-            )
-
-        finally:
-            if response is not None:
-                response.close()
-
-    return Response(
-        generate(),
-        content_type="application/x-ndjson; charset=utf-8",
-        headers={
-            "Cache-Control": "no-cache, no-transform",
-            "X-Accel-Buffering": "no",
-        },
-        direct_passthrough=True,
-    )
+    except Exception:
+        app.logger.exception("[TENX] Unexpected server error.")
+        return error("Unexpected server error. Check Vercel logs.", 500)
 
 
 if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
         port=int(os.getenv("PORT", "5000")),
-        threaded=True,
         debug=False,
     )
