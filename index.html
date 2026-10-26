@@ -128,9 +128,8 @@ textarea::placeholder{color:#777780}.send{width:42px;height:42px;border:0;border
 style="width:42px;height:42px;border:1px solid #38383f;border-radius:13px;background:#202024;color:#a3e635;font-size:24px;cursor:pointer;flex-shrink:0">+</button>
  
     <textarea id="prompt" rows="1" placeholder="Message TENX AI..." aria-label="Message TENX AI"></textarea>
-    <button type="button" id="generateImageButton" title="Generate image" aria-label="Generate image" style="width:42px;height:42px;border:1px solid #38383f;border-radius:13px;background:#202024;color:#a3e635;font-size:20px;cursor:pointer;flex-shrink:0">✦</button>
-<button class="send" id="send" aria-label="Send message" type="submit">↑</button>
-</form>
+    <button class="send" id="send" aria-label="Send message" type="submit">↑</button>
+  </form>
   <p class="hint">TENX AI can make mistakes. Check important information.</p>
 </div>
 </div>
@@ -420,65 +419,7 @@ async function sendMessage(text) {
     input.focus();
   }
 }
-const generateImageButton = document.getElementById('generateImageButton');
 
-generateImageButton.addEventListener('click', async () => {
-  const prompt = input.value.trim();
-
-  if (!prompt) {
-    alert('Write a description of the image first.');
-    input.focus();
-    return;
-  }
-
-  generateImageButton.disabled = true;
-  generateImageButton.textContent = '…';
-
-  const waiting = addMessage('assistant', 'Generating image…');
-  waiting.classList.add('typing');
-
-  try {
-    const response = await fetch('/api/generate-image', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || 'Image generation failed.');
-    }
-
-    if (!data.image) {
-      throw new Error('The server did not return an image.');
-    }
-
-    waiting.classList.remove('typing');
-    waiting.replaceChildren();
-
-    if (data.text) {
-      const description = document.createElement('p');
-      description.textContent = data.text;
-      waiting.appendChild(description);
-    }
-
-    const image = document.createElement('img');
-    image.src = `data:${data.mimeType || 'image/png'};base64,${data.image}`;
-    image.alt = prompt;
-    image.style.cssText = 'display:block;width:100%;max-width:420px;border-radius:12px;margin-top:10px';
-    waiting.appendChild(image);
-
-    input.value = '';
-  } catch (error) {
-    waiting.classList.remove('typing');
-    waiting.classList.add('error');
-    waiting.textContent = 'Image generation failed: ' + error.message;
-  } finally {
-    generateImageButton.disabled = false;
-    generateImageButton.textContent = '✦';
-  }
-});
 form.addEventListener('submit',e=>{e.preventDefault();sendMessage(input.value)});
 input.addEventListener('input',()=>{input.style.height='auto';input.style.height=Math.min(input.scrollHeight,160)+'px'});
 input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();form.requestSubmit()}});
